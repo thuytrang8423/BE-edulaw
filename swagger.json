@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://be-edulaw-production.up.railway.app/api/docs",
+      "url": "https://be-edulaw-production.up.railway.app/api",
       "description": "Railway server"
     }
   ],
