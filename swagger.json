@@ -1,0 +1,779 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AI Chatbot Law API",
+    "version": "1.0.0",
+    "description": "API documentation for the AI Chatbot for Education Laws."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Local server"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                },
+                "required": ["name", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User registered successfully" },
+          "409": { "description": "User with this email already exists" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login user",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/auth/verify-email-code": {
+      "post": {
+        "summary": "Verify user email with 6-digit code",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "code": { "type": "string", "example": "123456" }
+                },
+                "required": ["email", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Email verified successfully" },
+          "400": { "description": "Invalid or expired verification code" },
+          "404": { "description": "User not found" }
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "summary": "Resend verification email",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Verification email sent successfully" },
+          "404": { "description": "User not found" },
+          "400": { "description": "Email is already verified" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Request password reset",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password reset email sent if account exists" },
+          "500": { "description": "Failed to send password reset email" }
+        }
+      }
+    },
+    "/auth/reset-password/{token}": {
+      "post": {
+        "summary": "Reset password",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": { "type": "string", "format": "password" }
+                },
+                "required": ["password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password reset successfully" },
+          "400": { "description": "Invalid or expired password reset token" },
+          "500": { "description": "Password reset failed" }
+        }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "summary": "Refresh access token",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                },
+                "required": ["refreshToken"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "New access and refresh tokens returned" },
+          "401": { "description": "Invalid refresh token" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get current user info",
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current user info returned" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout user (client-side token removal)",
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Logout successful" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "summary": "Login with Google OAuth",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_token": { "type": "string", "description": "Google ID Token" }
+                },
+                "required": ["id_token"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login with Google successful" },
+          "401": { "description": "Google login failed" },
+          "400": { "description": "Missing Google ID token or Google account has no email" }
+        }
+      }
+    },
+    
+    "/legal-docs": {
+      "get": {
+        "summary": "[USER/ADMIN] Get all legal documents",
+        "description": "User và admin đều có thể xem danh sách văn bản pháp luật.",
+        "tags": ["LegalDocument"],
+        "responses": { "200": { "description": "List of legal documents" } }
+      },
+      "post": {
+        "summary": "[ADMIN] Create a new legal document",
+        "description": "Chỉ admin mới được tạo mới văn bản pháp luật.",
+        "tags": ["LegalDocument"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "document_name": { "type": "string" },
+                  "document_type": { "type": "string" },
+                  "document_date_issue": { "type": "string", "format": "date" },
+                  "document_signee": { "type": "string" }
+                },
+                "required": ["document_name", "document_type", "document_date_issue"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Legal document created" } }
+      }
+    },
+    "/legal-docs/upload": {
+      "post": {
+        "summary": "[ADMIN] Upload PDF, extract and save clauses",
+        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật, trích xuất và lưu các điều khoản vào database.",
+        "tags": ["LegalDocument"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "document_name": { "type": "string" },
+                  "document_type": { "type": "string" },
+                  "document_date_issue": { "type": "string", "format": "date" },
+                  "document_signee": { "type": "string" },
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["document_name", "document_type", "document_date_issue", "file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload và trích xuất thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "document": { "type": "object" },
+                    "clauses_saved": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Lỗi xử lý file hoặc trích xuất" }
+        }
+      }
+    },
+    "/legal-docs/{id}": {
+      "get": {
+        "summary": "[USER/ADMIN] Get legal document by ID",
+        "description": "User và admin đều có thể xem chi tiết văn bản.",
+        "tags": ["LegalDocument"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Legal document found" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "[ADMIN] Update legal document by ID",
+        "description": "Chỉ admin mới được cập nhật văn bản.",
+        "tags": ["LegalDocument"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "document_name": { "type": "string" },
+                  "document_type": { "type": "string" },
+                  "document_date_issue": { "type": "string", "format": "date" },
+                  "document_signee": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Legal document updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "[ADMIN] Delete legal document by ID",
+        "description": "Chỉ admin mới được xóa văn bản.",
+        "tags": ["LegalDocument"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Legal document deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    
+    "/legal-clauses": {
+      "get": {
+        "summary": "[USER/ADMIN] Get all legal clauses",
+        "description": "User và admin đều có thể xem danh sách điều khoản.",
+        "tags": ["LegalClause"],
+        "responses": { "200": { "description": "List of legal clauses" } }
+      },
+      "post": {
+        "summary": "[ADMIN] Create a new legal clause",
+        "description": "Chỉ admin mới được tạo mới điều khoản.",
+        "tags": ["LegalClause"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clause_number": { "type": "string" },
+                  "clause_content": { "type": "string" },
+                  "embedding": { "type": "array", "items": { "type": "number" } },
+                  "document_id": { "type": "string" }
+                },
+                "required": ["clause_number", "clause_content", "document_id"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Legal clause created" } }
+      }
+    },
+    "/legal-clauses/search": {
+      "get": {
+        "summary": "[USER/ADMIN] Search legal clauses by keyword",
+        "description": "User và admin đều có thể tìm kiếm điều khoản theo từ khóa.",
+        "tags": ["LegalClause"],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Từ khóa tìm kiếm trong nội dung hoặc số điều khoản",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách điều khoản phù hợp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "_id": { "type": "string" },
+                      "clause_number": { "type": "string" },
+                      "clause_content": { "type": "string" },
+                      "document_id": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing search keyword" }
+        }
+      }
+    },
+    "/legal-clauses/{id}": {
+      "get": {
+        "summary": "[USER/ADMIN] Get legal clause by ID",
+        "description": "User và admin đều có thể xem chi tiết điều khoản.",
+        "tags": ["LegalClause"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Legal clause found" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "[ADMIN] Update legal clause by ID",
+        "description": "Chỉ admin mới được cập nhật điều khoản.",
+        "tags": ["LegalClause"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clause_number": { "type": "string" },
+                  "clause_content": { "type": "string" },
+                  "embedding": { "type": "array", "items": { "type": "number" } },
+                  "document_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Legal clause updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "[ADMIN] Delete legal clause by ID",
+        "description": "Chỉ admin mới được xóa điều khoản.",
+        "tags": ["LegalClause"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Legal clause deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    
+    "/answer-clauses": {
+      "get": {
+        "summary": "Get all answer-clauses",
+        "tags": ["AnswerClause"],
+        "responses": { "200": { "description": "List of answer-clauses" } }
+      },
+      "post": {
+        "summary": "Create a new answer-clause",
+        "tags": ["AnswerClause"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answer_id": { "type": "string" },
+                  "clause_id": { "type": "string" }
+                },
+                "required": ["answer_id", "clause_id"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Answer-clause created" } }
+      }
+    },
+    "/answer-clauses/{id}": {
+      "get": {
+        "summary": "Get answer-clause by ID",
+        "tags": ["AnswerClause"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Answer-clause found" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "Update answer-clause by ID",
+        "tags": ["AnswerClause"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answer_id": { "type": "string" },
+                  "clause_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Answer-clause updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "Delete answer-clause by ID",
+        "tags": ["AnswerClause"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Answer-clause deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    
+    "/answers": {
+      "get": {
+        "summary": "[USER/ADMIN] Get all answers",
+        "description": "User và admin đều có thể xem danh sách câu trả lời.",
+        "tags": ["Answer"],
+        "responses": { "200": { "description": "List of answers" } }
+      },
+      "post": {
+        "summary": "[ADMIN] Create a new answer",
+        "description": "Chỉ admin mới được tạo mới câu trả lời.",
+        "tags": ["Answer"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answer_content": { "type": "string" },
+                  "question_id": { "type": "string" }
+                },
+                "required": ["answer_content", "question_id"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Answer created" } }
+      }
+    },
+    "/answers/{id}": {
+      "get": {
+        "summary": "[USER/ADMIN] Get answer by ID",
+        "description": "User và admin đều có thể xem chi tiết câu trả lời.",
+        "tags": ["Answer"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Answer found" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "[ADMIN] Update answer by ID",
+        "description": "Chỉ admin mới được cập nhật câu trả lời.",
+        "tags": ["Answer"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answer_content": { "type": "string" },
+                  "question_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Answer updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "[ADMIN] Delete answer by ID",
+        "description": "Chỉ admin mới được xóa câu trả lời.",
+        "tags": ["Answer"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Answer deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    
+    "/notifications": {
+      "get": {
+        "summary": "[USER/ADMIN] Get all notifications",
+        "description": "User và admin đều có thể xem danh sách thông báo.",
+        "tags": ["Notification"],
+        "responses": { "200": { "description": "List of notifications" } }
+      },
+      "post": {
+        "summary": "[ADMIN] Create a new notification",
+        "description": "Chỉ admin mới được tạo mới thông báo.",
+        "tags": ["Notification"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "content": { "type": "string" },
+                  "isRead": { "type": "boolean" }
+                },
+                "required": ["title", "content"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Notification created" } }
+      }
+    },
+    "/notifications/{id}": {
+      "get": {
+        "summary": "[USER/ADMIN] Get notification by ID",
+        "description": "User và admin đều có thể xem chi tiết thông báo.",
+        "tags": ["Notification"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Notification found" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "[ADMIN] Update notification by ID",
+        "description": "Chỉ admin mới được cập nhật thông báo.",
+        "tags": ["Notification"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "content": { "type": "string" },
+                  "isRead": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Notification updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "[ADMIN] Delete notification by ID",
+        "description": "Chỉ admin mới được xóa thông báo.",
+        "tags": ["Notification"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Notification deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    
+    "/questions": {
+      "get": {
+        "summary": "[USER/ADMIN] Get all questions",
+        "description": "User và admin đều có thể xem danh sách câu hỏi.",
+        "tags": ["Question"],
+        "responses": { "200": { "description": "List of questions" } }
+      },
+      "post": {
+        "summary": "[USER/ADMIN] Create a new question",
+        "description": "User và admin đều có thể tạo mới câu hỏi.",
+        "tags": ["Question"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question_content": { "type": "string" },
+                  "account_id": { "type": "string" }
+                },
+                "required": ["question_content", "account_id"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Question created" } }
+      }
+    },
+    "/questions/{id}": {
+      "get": {
+        "summary": "[USER/ADMIN] Get question by ID",
+        "description": "User và admin đều có thể xem chi tiết câu hỏi.",
+        "tags": ["Question"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Question found" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "[USER/ADMIN] Update question by ID",
+        "description": "User và admin đều có thể cập nhật câu hỏi của mình.",
+        "tags": ["Question"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question_content": { "type": "string" },
+                  "account_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Question updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "[USER/ADMIN] Delete question by ID",
+        "description": "User và admin đều có thể xóa câu hỏi của mình.",
+        "tags": ["Question"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Question deleted" }, "404": { "description": "Not found" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+} 
