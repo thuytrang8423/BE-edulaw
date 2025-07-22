@@ -44,15 +44,7 @@ const resetPasswordValidation = [
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
-  
-  body('confirmPassword')
-    .custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('Passwords do not match');
-      }
-      return true;
-    })
+    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
 ];
 
 // Validation error handler

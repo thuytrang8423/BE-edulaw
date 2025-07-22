@@ -7,7 +7,8 @@
   },
   "servers": [
     {
-      "url": "https://be-edulaw-production.up.railway.app/api",
+    
+      "url": "http://localhost:5000/api",
       "description": "Railway server"
     }
   ],
@@ -163,7 +164,7 @@
     "/auth/reset-password": {
       "post": {
         "summary": "Reset password with 6-digit code",
-        "description": "Đặt lại mật khẩu bằng mã code 6 số đã gửi về email. Không dùng link.",
+        "description": "Đặt lại mật khẩu bằng mã code 6 số đã gửi về email",
         "tags": ["Auth"],
         "requestBody": {
           "required": true,
@@ -841,7 +842,7 @@
     "/questions/chat-sessions": {
       "get": {
         "summary": "[USER/ADMIN] Lấy danh sách các phòng chat (session) của user",
-        "description": "Trả về danh sách các phòng chat (session) của user, mỗi session là một cuộc hội thoại riêng biệt. Dùng để hiển thị sidebar lịch sử chat như ChatGPT.",
+        "description": "Trả về danh sách các phòng chat (session) của user, mỗi session là một cuộc hội thoại riêng biệt",
         "tags": ["Question"],
         "parameters": [
           {
@@ -938,6 +939,89 @@
         ],
         "responses": { "200": { "description": "Feedback deleted" }, "404": { "description": "Not found" } }
       }
+    },
+    "/auth/users": {
+      "get": {
+        "summary": "[ADMIN] Lấy danh sách tất cả user",
+        "description": "Chỉ admin mới được xem danh sách user.",
+        "tags": ["User"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/auth/users/{id}": {
+      "get": {
+        "summary": "[ADMIN] Lấy user theo ID",
+        "description": "Chỉ admin mới được xem thông tin user.",
+        "tags": ["User"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "User not found" }
+        }
+      },
+      "put": {
+        "summary": "[ADMIN] Cập nhật user theo ID",
+        "description": "Chỉ admin mới được cập nhật thông tin user.",
+        "tags": ["User"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/User" },
+              "example": {
+                "name": "Nguyen Van B",
+                "email": "vanb@example.com",
+                "role": "user"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "User not found" }
+        }
+      },
+      "delete": {
+        "summary": "[ADMIN] Xóa user theo ID",
+        "description": "Chỉ admin mới được xóa user.",
+        "tags": ["User"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User deleted" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "User not found" }
+        }
+      }
     }
   },
   "components": {
@@ -946,6 +1030,19 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string" },
+          "isEmailVerified": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
       }
     }
   }

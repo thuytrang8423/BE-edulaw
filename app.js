@@ -6,6 +6,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
+const http = require('http');
+const socketio = require('socket.io');
 
 const authRoutes = require('./routes/auth');
 const questionRoutes = require('./routes/question');
@@ -14,8 +16,12 @@ const legalDocumentRoutes = require('./routes/legalDocs');
 const legalClauseRoutes = require('./routes/legalClauses');
 const answerClauseRoutes = require('./routes/answerClauses');
 const notificationRoutes = require('./routes/notifications');
+const feedbackRoutes = require('./routes/feedbacks');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketio(server, { cors: { origin: '*' } });
+app.set('io', io);
 
 // Middleware
 app.use(helmet());
@@ -42,8 +48,9 @@ app.use('/api/legal-docs', legalDocumentRoutes);
 app.use('/api/legal-clauses', legalClauseRoutes);
 app.use('/api/answer-clauses', answerClauseRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/feedbacks', feedbackRoutes);
 
-// Swagger UI (mount riêng, không dùng /api cho swaggerUi.serve)
+// Swagger UI
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health check
@@ -63,7 +70,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Swagger running on http://localhost:${PORT}/api/docs`);
 }); 

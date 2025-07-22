@@ -287,36 +287,24 @@ class AuthController {
   // Reset password
   async resetPassword(req, res) {
     try {
-      const { token } = req.params;
-      const { password } = req.body;
-
-      // Hash the token to compare with stored hash
-      const hashedToken = crypto
-        .createHash('sha256')
-        .update(token)
-        .digest('hex');
-
-      const user = await User.findOne({
-        passwordResetToken: hashedToken,
-        passwordResetExpires: { $gt: Date.now() }
-      });
-
+      const { email, code, password } = req.body;
+      const user = await User.findOne({ email });
       if (!user) {
-        return res.status(400).json({ 
-          message: 'Invalid or expired password reset token' 
-        });
+        return res.status(404).json({ message: 'User not found' });
       }
-
-      // Update password
+      if (!user.emailVerificationCode || !user.emailVerificationExpires) {
+        return res.status(400).json({ message: 'No reset code found. Please request a new one.' });
+      }
+      if (!user.verifyEmailCode(code)) {
+        return res.status(400).json({ message: 'Invalid or expired code' });
+      }
       user.password = password;
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
+      user.emailVerificationCode = undefined;
+      user.emailVerificationExpires = undefined;
       user.loginAttempts = 0;
       user.lockUntil = undefined;
       await user.save();
-
       res.json({ message: 'Password reset successfully' });
-
     } catch (error) {
       console.error('Password reset error:', error);
       res.status(500).json({ message: 'Password reset failed' });
@@ -395,6 +383,49 @@ class AuthController {
     } catch (error) {
       console.error('Get me error:', error);
       res.status(500).json({ message: 'Failed to get user information' });
+    }
+  }
+
+  // Lấy danh sách tất cả user (admin)
+  async getAllUsers(req, res) {
+    try {
+      const users = await User.find();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get users' });
+    }
+  }
+
+  // Lấy user theo id (admin)
+  async getUserById(req, res) {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get user' });
+    }
+  }
+
+  // Cập nhật user (admin)
+  async updateUser(req, res) {
+    try {
+      const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update user' });
+    }
+  }
+
+  // Xóa user (admin)
+  async deleteUser(req, res) {
+    try {
+      const user = await User.findByIdAndDelete(req.params.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json({ message: 'User deleted' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete user' });
     }
   }
 

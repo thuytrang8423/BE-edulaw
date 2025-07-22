@@ -7,6 +7,7 @@ const {
   authenticateToken,
   createAccountLimiter,
   loginLimiter,
+  authorize,
 } = require("../middleware/auth");
 const {
   registerValidation,
@@ -45,7 +46,7 @@ router.post(
 );
 
 router.post(
-  "/reset-password/:token",
+  "/reset-password",
   resetPasswordValidation,
   handleValidationErrors,
   authController.resetPassword.bind(authController)
@@ -58,5 +59,11 @@ router.post("/google", authController.loginWithGoogle.bind(authController));
 // Protected routes
 router.get("/me", authenticateToken, authController.getMe.bind(authController));
 router.post("/logout", authenticateToken, authController.logout.bind(authController));
+
+// CRUD user (admin)
+router.get("/users", authenticateToken, authorize('admin'), authController.getAllUsers.bind(authController));
+router.get("/users/:id", authenticateToken, authorize('admin'), authController.getUserById.bind(authController));
+router.put("/users/:id", authenticateToken, authorize('admin'), authController.updateUser.bind(authController));
+router.delete("/users/:id", authenticateToken, authorize('admin'), authController.deleteUser.bind(authController));
 
 module.exports = router;
