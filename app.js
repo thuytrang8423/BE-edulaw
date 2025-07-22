@@ -36,13 +36,15 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/legal-docs', legalDocumentRoutes);
 app.use('/api/legal-clauses', legalClauseRoutes);
 app.use('/api/answer-clauses', answerClauseRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// Swagger UI (mount riêng, không dùng /api cho swaggerUi.serve)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health check
 app.get('/api/health', (req, res) => {
