@@ -59,6 +59,7 @@ router.post("/google", authController.loginWithGoogle.bind(authController));
 // Protected routes
 router.get("/me", authenticateToken, authController.getMe.bind(authController));
 router.post("/logout", authenticateToken, authController.logout.bind(authController));
+router.put('/profile', authenticateToken, authController.updateProfile.bind(authController));
 
 // CRUD user (admin)
 router.get("/users", authenticateToken, authorize('admin'), authController.getAllUsers.bind(authController));

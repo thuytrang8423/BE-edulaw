@@ -433,6 +433,33 @@ class AuthController {
   async logout(req, res) {
     res.json({ message: 'Logout successful' });
   }
+
+  // Cập nhật profile cho user hoặc admin (phải login, chỉ cập nhật chính mình)
+  async updateProfile(req, res) {
+    try {
+      const userId = req.user.id;
+      const { name, email } = req.body;
+      // Không cho phép đổi role qua API này
+      const update = {};
+      if (name) update.name = name;
+      if (email) update.email = email;
+      const user = await User.findByIdAndUpdate(userId, update, { new: true });
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json({
+        message: 'Profile updated successfully',
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          createdAt: user.createdAt
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
+  }
 }
 
 module.exports = AuthController;
