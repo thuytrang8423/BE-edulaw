@@ -143,113 +143,71 @@ class EmailService {
     `;
   }
 
-  // Send verification email with clean, professional design
-  async sendVerificationEmail(user, verificationCode) {
+  // Send verification email with 6-digit code (dùng chung cho verify, reset password, v.v.)
+  async sendCodeEmail(user, code, type = 'verify') {
+    let title = '';
+    let subject = '';
+    let notice = '';
+    if (type === 'verify') {
+      title = 'Xác thực tài khoản của bạn';
+      subject = 'Xác thực tài khoản - AI Legal Assistant';
+      notice = 'Mã xác thực có hiệu lực trong <strong>10 phút</strong> kể từ thời điểm gửi email này.';
+    } else if (type === 'reset') {
+      title = 'Đặt lại mật khẩu';
+      subject = 'Đặt lại mật khẩu - AI Legal Assistant';
+      notice = 'Mã đặt lại mật khẩu có hiệu lực trong <strong>10 phút</strong> kể từ thời điểm gửi email này.';
+    } else {
+      title = 'Mã xác thực';
+      subject = 'Mã xác thực - AI Legal Assistant';
+      notice = 'Mã xác thực có hiệu lực trong <strong>10 phút</strong>.';
+    }
+
     const content = `
       <p style="margin-bottom: 20px;">
         Xin chào <strong style="color: #1e293b;">${user.name}</strong>,
       </p>
-      
       <p style="margin-bottom: 24px;">
-        Cảm ơn bạn đã đăng ký tài khoản AI Legal Assistant. Để hoàn tất quá trình đăng ký và bảo đảm tính bảo mật, 
-        vui lòng nhập mã xác thực bên dưới vào ứng dụng:
+        ${type === 'verify' ? 'Cảm ơn bạn đã đăng ký tài khoản AI Legal Assistant. Để hoàn tất quá trình đăng ký và bảo đảm tính bảo mật, vui lòng nhập mã xác thực bên dưới vào ứng dụng:' :
+        type === 'reset' ? 'Bạn vừa yêu cầu đặt lại mật khẩu. Vui lòng nhập mã xác thực bên dưới vào ứng dụng để tiếp tục:' :
+        'Vui lòng sử dụng mã xác thực bên dưới.'}
       </p>
-
-      <!-- Verification Code -->
       <div style="text-align: center; margin: 32px 0;">
         <div style="display: inline-block; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 12px; padding: 24px 32px;">
           <div style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
             Mã xác thực
           </div>
           <div style="font-size: 32px; font-weight: 700; color: #1e40af; letter-spacing: 8px; font-family: 'Courier New', monospace;">
-            ${verificationCode}
+            ${code}
           </div>
         </div>
       </div>
-
-      <!-- Important Notice -->
       <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
         <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 500;">
-          ⏰ Mã xác thực có hiệu lực trong <strong>10 phút</strong> kể từ thời điểm gửi email này.
+          ⏰ ${notice}
         </p>
       </div>
-
       <p style="margin-bottom: 0; color: #64748b; font-size: 14px;">
-        Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email và liên hệ với chúng tôi nếu cần hỗ trợ.
+        Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email và liên hệ với chúng tôi nếu cần hỗ trợ.
       </p>
     `;
 
     const mailOptions = {
       from: `"AI Legal Assistant" <${process.env.FROM_EMAIL}>`,
       to: user.email,
-      subject: "Xác thực tài khoản - AI Legal Assistant",
-      html: this.getEmailTemplate(
-        "Xác thực tài khoản của bạn",
-        content,
-        null,
-        null,
-        "primary"
-      ),
+      subject,
+      html: this.getEmailTemplate(title, content, null, null, "primary"),
     };
-
     await this.transporter.sendMail(mailOptions);
   }
 
-  // Send password reset email
-  async sendPasswordResetEmail(user, resetToken) {
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+  // Gửi email xác thực tài khoản (gọi hàm chung)
+  async sendVerificationEmail(user, code) {
+    await this.sendCodeEmail(user, code, 'verify');
+  }
 
-    const content = `
-      <p style="margin-bottom: 20px;">
-        Xin chào <strong style="color: #1e293b;">${user.name}</strong>,
-      </p>
-      
-      <p style="margin-bottom: 24px;">
-        Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. 
-        Để đảm bảo tính bảo mật, vui lòng nhấp vào nút bên dưới để thiết lập mật khẩu mới:
-      </p>
-
-      <!-- Security Warning -->
-      <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 16px 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-          <span style="color: #dc2626; font-size: 16px;">⚠️</span>
-          <strong style="color: #dc2626; font-size: 14px; font-weight: 600;">Lưu ý bảo mật</strong>
-        </div>
-        <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.4;">
-          Link đặt lại mật khẩu sẽ <strong>hết hạn sau 10 phút</strong> kể từ khi gửi email này.
-        </p>
-      </div>
-
-      <!-- Alternative Link -->
-      <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0;">
-        <p style="margin: 0 0 12px 0; font-size: 14px; color: #475569; font-weight: 500;">
-          Hoặc sao chép đường dẫn sau vào trình duyệt:
-        </p>
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; font-family: 'Courier New', monospace; font-size: 12px; color: #64748b; word-break: break-all;">
-          ${resetUrl}
-        </div>
-      </div>
-
-      <p style="margin-bottom: 0; color: #64748b; font-size: 14px;">
-        Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này. 
-        Tài khoản của bạn vẫn hoàn toàn an toàn.
-      </p>
-    `;
-
-    const mailOptions = {
-      from: `"AI Legal Assistant" <${process.env.FROM_EMAIL}>`,
-      to: user.email,
-      subject: "Đặt lại mật khẩu - AI Legal Assistant",
-      html: this.getEmailTemplate(
-        "Yêu cầu đặt lại mật khẩu",
-        content,
-        "Đặt lại mật khẩu",
-        resetUrl,
-        "warning"
-      ),
-    };
-
-    await this.transporter.sendMail(mailOptions);
+  // Gửi email đặt lại mật khẩu (gửi code, không gửi link)
+  async sendPasswordResetEmail(user, code) {
+    await this.sendCodeEmail(user, code, 'reset');
   }
 
   // Send welcome email after verification
