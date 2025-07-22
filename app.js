@@ -36,7 +36,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/legal-docs', legalDocumentRoutes);
