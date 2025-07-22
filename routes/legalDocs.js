@@ -18,19 +18,31 @@ function extractClauses(text) {
     /(Điều\s+\d+)[\s\S]*?\n([\s\S]*?)(?=\nĐiều\s+\d+|$)/g,
     /(^Điều\s+\d+.*$)([\s\S]*?)(?=^Điều\s+\d+.*$|\Z)/gm
   ];
+  let allClauses = [];
   for (const regex of regexes) {
     let match;
     const clauses = [];
     while ((match = regex.exec(text)) !== null) {
       let clause_number = match[1].replace(/\n|\r|\s+$/g, '').trim();
+      // Chuẩn hóa số điều khoản
+      clause_number = clause_number.replace(/[^\d]/g, '') ? `Điều ${clause_number.replace(/[^\d]/g, '')}` : clause_number;
       let clause_content = (match[2] || '').replace(/\n{2,}/g, '\n').trim();
-      if (clause_content.length > 10) {
+      if (clause_content.length > 20) {
         clauses.push({ clause_number, clause_content });
       }
     }
-    if (clauses.length > 0) return clauses;
+    if (clauses.length > 0) allClauses = allClauses.concat(clauses);
   }
-  return [];
+  // Loại bỏ điều khoản trùng số
+  const unique = [];
+  const seen = new Set();
+  for (const c of allClauses) {
+    if (!seen.has(c.clause_number)) {
+      unique.push(c);
+      seen.add(c.clause_number);
+    }
+  }
+  return unique;
 }
 
 // CRUD routes
@@ -53,6 +65,11 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const data = await pdfParse(dataBuffer);
     // 3. Tách điều khoản bằng nhiều pattern mạnh nhất
     const clauses = extractClauses(data.text);
+    if (!clauses || clauses.length === 0) {
+      fs.unlinkSync(req.file.path);
+      await LegalDocument.findByIdAndDelete(legalDoc._id); // Xóa văn bản rác
+      return res.status(400).json({ success: false, message: 'Không trích xuất được điều khoản. Vui lòng chọn file PDF khác hoặc kiểm tra lại định dạng.' });
+    }
     for (let i = 0; i < clauses.length; i++) {
       await LegalClause.create({
         clause_number: clauses[i].clause_number || (i + 1).toString(),
@@ -74,9 +91,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       io.emit('notification', notification);
     }
 
-    res.json({ message: 'Upload và trích xuất thành công', document: legalDoc, clauses_saved: clauses.length });
+    res.json({ success: true, message: 'Upload và trích xuất thành công', document: legalDoc, clauses_saved: clauses.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
