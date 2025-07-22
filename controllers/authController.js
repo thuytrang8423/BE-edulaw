@@ -130,12 +130,12 @@ class AuthController {
         return res.status(400).json({ message: 'Email is already verified' });
       }
 
-      // Generate new verification token
-      const verificationToken = user.generateEmailVerificationToken();
+      // Generate new 6-digit code
+      const code = user.generateEmailVerificationCode();
       await user.save();
 
-      // Send verification email
-      await emailService.sendVerificationEmail(user, verificationToken);
+      // Send verification email with code
+      await emailService.sendVerificationEmail(user, code);
 
       res.json({ message: 'Verification email sent successfully' });
 
@@ -253,30 +253,29 @@ class AuthController {
       if (!user) {
         // Don't reveal if email exists or not for security
         return res.json({ 
-          message: 'If an account with that email exists, we have sent a password reset link.' 
+          message: 'If an account with that email exists, we have sent a password reset code.' 
         });
       }
 
-      // Generate reset token
-      const resetToken = user.generatePasswordResetToken();
+      // Generate 6-digit code for password reset
+      const code = user.generateEmailVerificationCode();
       await user.save();
 
-      // Send reset email
+      // Send password reset email with code
       try {
-        await emailService.sendPasswordResetEmail(user, resetToken);
+        await emailService.sendPasswordResetEmail(user, code);
       } catch (emailError) {
         console.error('Password reset email failed:', emailError);
-        user.passwordResetToken = undefined;
-        user.passwordResetExpires = undefined;
+        user.emailVerificationCode = undefined;
+        user.emailVerificationExpires = undefined;
         await user.save();
-        
         return res.status(500).json({ 
           message: 'Failed to send password reset email. Please try again.' 
         });
       }
 
       res.json({ 
-        message: 'If an account with that email exists, we have sent a password reset link.' 
+        message: 'If an account with that email exists, we have sent a password reset code.' 
       });
 
     } catch (error) {
