@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Railway server"
+      "url": "http://localhost:5000/api",
+      "description": "Local server"
     }
   ],
   "paths": {
@@ -28,12 +28,17 @@
                   "password": { "type": "string", "format": "password" }
                 },
                 "required": ["name", "email", "password"]
+              },
+              "example": {
+                "name": "Nguyen Van A",
+                "email": "vana@example.com",
+                "password": "Password123"
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "User registered successfully" },
+          "201": { "description": "User registered successfully. Verification code sent to email." },
           "409": { "description": "User with this email already exists" }
         }
       }
@@ -53,12 +58,16 @@
                   "password": { "type": "string", "format": "password" }
                 },
                 "required": ["email", "password"]
+              },
+              "example": {
+                "email": "vana@example.com",
+                "password": "Password123"
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Login successful" },
+          "200": { "description": "Login successful. JWT tokens returned." },
           "401": { "description": "Invalid credentials" }
         }
       }
@@ -66,6 +75,7 @@
     "/auth/verify-email-code": {
       "post": {
         "summary": "Verify user email with 6-digit code",
+        "description": "Nhập mã code 6 số đã gửi về email để xác thực tài khoản. Không dùng link.",
         "tags": ["Auth"],
         "requestBody": {
           "required": true,
@@ -78,6 +88,10 @@
                   "code": { "type": "string", "example": "123456" }
                 },
                 "required": ["email", "code"]
+              },
+              "example": {
+                "email": "vana@example.com",
+                "code": "123456"
               }
             }
           }
@@ -91,7 +105,8 @@
     },
     "/auth/resend-verification": {
       "post": {
-        "summary": "Resend verification email",
+        "summary": "Resend verification code (6 digits)",
+        "description": "Gửi lại mã xác thực 6 số về email. Không gửi link.",
         "tags": ["Auth"],
         "requestBody": {
           "required": true,
@@ -103,12 +118,15 @@
                   "email": { "type": "string", "format": "email" }
                 },
                 "required": ["email"]
+              },
+              "example": {
+                "email": "vana@example.com"
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Verification email sent successfully" },
+          "200": { "description": "Verification code sent successfully" },
           "404": { "description": "User not found" },
           "400": { "description": "Email is already verified" }
         }
@@ -116,7 +134,8 @@
     },
     "/auth/forgot-password": {
       "post": {
-        "summary": "Request password reset",
+        "summary": "Request password reset (send 6-digit code)",
+        "description": "Gửi mã code 6 số về email để đặt lại mật khẩu. Không gửi link.",
         "tags": ["Auth"],
         "requestBody": {
           "required": true,
@@ -128,28 +147,24 @@
                   "email": { "type": "string", "format": "email" }
                 },
                 "required": ["email"]
+              },
+              "example": {
+                "email": "vana@example.com"
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Password reset email sent if account exists" },
-          "500": { "description": "Failed to send password reset email" }
+          "200": { "description": "Password reset code sent if account exists" },
+          "500": { "description": "Failed to send password reset code" }
         }
       }
     },
-    "/auth/reset-password/{token}": {
+    "/auth/reset-password": {
       "post": {
-        "summary": "Reset password",
+        "summary": "Reset password with 6-digit code",
+        "description": "Đặt lại mật khẩu bằng mã code 6 số đã gửi về email. Không dùng link.",
         "tags": ["Auth"],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -157,17 +172,24 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "code": { "type": "string", "example": "123456" },
                   "password": { "type": "string", "format": "password" }
                 },
-                "required": ["password"]
+                "required": ["email", "code", "password"]
+              },
+              "example": {
+                "email": "vana@example.com",
+                "code": "123456",
+                "password": "NewPassword123"
               }
             }
           }
         },
         "responses": {
           "200": { "description": "Password reset successfully" },
-          "400": { "description": "Invalid or expired password reset token" },
-          "500": { "description": "Password reset failed" }
+          "400": { "description": "Invalid or expired code" },
+          "404": { "description": "User not found" }
         }
       }
     },
@@ -219,7 +241,8 @@
     },
     "/auth/google": {
       "post": {
-        "summary": "Login with Google OAuth",
+        "summary": "Login with Google OAuth (Expo/React Native/Web)",
+        "description": "FE lấy id_token từ Google (qua Expo AuthSession hoặc Google Identity Services), gửi lên backend để xác thực và nhận JWT.",
         "tags": ["Auth"],
         "requestBody": {
           "required": true,
@@ -231,12 +254,15 @@
                   "id_token": { "type": "string", "description": "Google ID Token" }
                 },
                 "required": ["id_token"]
+              },
+              "example": {
+                "id_token": "ya29.a0AfH6SMB..."
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Login with Google successful" },
+          "200": { "description": "Login with Google successful. JWT tokens returned." },
           "401": { "description": "Google login failed" },
           "400": { "description": "Missing Google ID token or Google account has no email" }
         }
@@ -764,6 +790,153 @@
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": { "200": { "description": "Question deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/questions/chat-history": {
+      "get": {
+        "summary": "[USER/ADMIN] Lấy lịch sử chat theo user và session (chat_id)",
+        "description": "Trả về danh sách các cặp question-answer của user, có thể filter theo chat_id (mỗi session là một cuộc hội thoại riêng).",
+        "tags": ["Question"],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "ID của user (bắt buộc)",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "chat_id",
+            "in": "query",
+            "description": "ID của cuộc hội thoại (session). Nếu không truyền sẽ trả về toàn bộ lịch sử của user.",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách lịch sử chat (question-answer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "question": { "type": "string" },
+                      "answer": { "type": "string" },
+                      "question_date": { "type": "string", "format": "date-time" },
+                      "answer_date": { "type": "string", "format": "date-time" },
+                      "chat_id": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing user_id" }
+        }
+      }
+    },
+    "/questions/chat-sessions": {
+      "get": {
+        "summary": "[USER/ADMIN] Lấy danh sách các phòng chat (session) của user",
+        "description": "Trả về danh sách các phòng chat (session) của user, mỗi session là một cuộc hội thoại riêng biệt. Dùng để hiển thị sidebar lịch sử chat như ChatGPT.",
+        "tags": ["Question"],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "ID của user (bắt buộc)",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách các phòng chat (session)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "chat_id": { "type": "string" },
+                      "last_question_date": { "type": "string", "format": "date-time" },
+                      "first_question": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing user_id" }
+        }
+      }
+    },
+    
+    "/feedbacks": {
+      "post": {
+        "summary": "[USER] Gửi feedback về hệ thống",
+        "description": "User gửi góp ý/phản hồi về hệ thống.",
+        "tags": ["Feedback"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["user_id", "content"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Feedback created" } }
+      },
+      "get": {
+        "summary": "[ADMIN] Xem tất cả feedback",
+        "description": "Admin xem danh sách góp ý/phản hồi của user.",
+        "tags": ["Feedback"],
+        "responses": { "200": { "description": "List of feedbacks" } }
+      }
+    },
+    "/feedbacks/{id}": {
+      "put": {
+        "summary": "[ADMIN] Xử lý feedback",
+        "description": "Admin cập nhật trạng thái hoặc nội dung feedback.",
+        "tags": ["Feedback"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": { "type": "string" },
+                  "status": { "type": "string", "enum": ["pending", "handled"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Feedback updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "[ADMIN] Xóa feedback",
+        "description": "Admin xóa góp ý/phản hồi.",
+        "tags": ["Feedback"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Feedback deleted" }, "404": { "description": "Not found" } }
       }
     }
   },
