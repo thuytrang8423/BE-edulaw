@@ -2,8 +2,9 @@ const Question = require("../models/Question");
 const LegalClause = require("../models/LegalClause");
 const Answer = require("../models/Answer");
 const axios = require("axios");
+const LegalDocument = require("../models/LegalDocument");
+const ChatRoom = require('../models/ChatRoom');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const LegalDocument = require("../models/LegalDocument"); // Added this import
 
 exports.create = async (req, res) => {
   try {
@@ -12,16 +13,40 @@ exports.create = async (req, res) => {
     // 1. Lưu question
     const question = await Question.create({ question_content, account_id, chat_id: chatId });
 
-    // 2. Tìm clause liên quan (ưu tiên theo tên văn bản luật)
-    const keyword = question_content.trim();
-    // Tìm các văn bản luật có tên liên quan
+    // 1. Danh sách stopword (không có 'luật', 'bộ luật', ...)
+    const stopwords = ['tôi', 'muốn', 'biết', 'về', 'của', 'là', 'cái', 'gì', 'xin', 'cho', 'hỏi', 'được', 'cần', 'như', 'thế', 'nào', 'ai', 'ở', 'khi', 'nào', 'bao', 'nhiêu', 'vì', 'sao', 'có', 'không', 'phải', 'hay', 'và', 'hoặc', 'với', 'trong', 'ra', 'đến', 'tới', 'để', 'bằng', 'theo', 'nên', 'nếu', 'thì', 'mà', 'nhưng', 'cũng', 'đã', 'đang', 'sẽ', 'vẫn', 'chỉ', 'rất', 'hơn', 'ít', 'nhiều', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười'];
+
+    // 2. Hàm tách cụm từ pháp lý đặc trưng
+    function extractLegalPhrase(text) {
+      const lower = text.toLowerCase();
+      const match = lower.match(/(luật|bộ luật|nghị định|quy định|pháp luật|văn bản) [a-zA-ZÀ-ỹ0-9\s]+/);
+      if (match) return match[0].trim();
+      return null;
+    }
+
+    function extractKeywords(text) {
+      // Ưu tiên lấy cụm pháp lý đặc trưng
+      const legalPhrase = extractLegalPhrase(text);
+      if (legalPhrase) return legalPhrase;
+      // Nếu không có, loại stopword như cũ
+      return text
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(word => !stopwords.includes(word))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    const rawKeyword = question_content.trim();
+    const keyword = extractKeywords(rawKeyword) || rawKeyword;
+    // 3. Tìm các văn bản luật có tên liên quan
     const lawDocs = await LegalDocument.find({ document_name: { $regex: keyword, $options: 'i' } });
     let docIds = lawDocs.map(doc => doc._id);
     let clauseFilter = [];
     if (docIds.length > 0) {
       clauseFilter.push({ document_id: { $in: docIds } });
     }
-    // Tìm điều khoản có nội dung hoặc số điều khoản chứa từ khóa chính xác (word boundary)
     clauseFilter.push(
       { clause_content: { $regex: `\\b${keyword}\\b`, $options: 'i' } },
       { clause_number: { $regex: keyword, $options: 'i' } }
@@ -118,58 +143,58 @@ exports.delete = async (req, res) => {
   res.json({ message: "Deleted" });
 };
 
-exports.getChatHistory = async (req, res) => {
-  try {
-    const { user_id, chat_id } = req.query;
-    if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
-    const filter = { account_id: user_id };
-    if (chat_id) filter.chat_id = chat_id;
-    // Lấy tất cả question của user (và chat_id nếu có), sort theo thời gian
-    const questions = await Question.find(filter).sort({ question_date: 1 });
-    // Lấy answer cho từng question
-    const chatHistory = await Promise.all(
-      questions.map(async (q) => {
-        const answer = await Answer.findOne({ question_id: q._id });
-        return {
-          question: q.question_content,
-          answer: answer ? answer.answer_content : null,
-          question_date: q.question_date,
-          answer_date: answer ? answer.answer_date : null,
-          chat_id: q.chat_id
-        };
-      })
-    );
-    res.json(chatHistory);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+// exports.getChatHistory = async (req, res) => {
+//   try {
+//     const { user_id, chat_id } = req.query;
+//     if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
+//     const filter = { account_id: user_id };
+//     if (chat_id) filter.chat_id = chat_id;
+//     // Lấy tất cả question của user (và chat_id nếu có), sort theo thời gian
+//     const questions = await Question.find(filter).sort({ question_date: 1 });
+//     // Lấy answer cho từng question
+//     const chatHistory = await Promise.all(
+//       questions.map(async (q) => {
+//         const answer = await Answer.findOne({ question_id: q._id });
+//         return {
+//           question: q.question_content,
+//           answer: answer ? answer.answer_content : null,
+//           question_date: q.question_date,
+//           answer_date: answer ? answer.answer_date : null,
+//           chat_id: q.chat_id
+//         };
+//       })
+//     );
+//     res.json(chatHistory);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 
-// Lấy danh sách các phòng chat (session) của user
-exports.getChatSessions = async (req, res) => {
-  try {
-    const { user_id } = req.query;
-    if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
+// // Lấy danh sách các phòng chat (session) của user
+// exports.getChatSessions = async (req, res) => {
+//   try {
+//     const { user_id } = req.query;
+//     if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
 
-    // Lấy tất cả chat_id của user, group by chat_id, sort theo thời gian mới nhất
-    const sessions = await Question.aggregate([
-      { $match: { account_id: typeof user_id === 'string' ? (user_id.length === 24 ? new (require('mongoose').Types.ObjectId)(user_id) : user_id) : user_id } },
-      { $group: {
-          _id: "$chat_id",
-          last_question_date: { $max: "$question_date" },
-          first_question: { $first: "$question_content" }
-        }
-      },
-      { $sort: { last_question_date: -1 } }
-    ]);
-    const result = sessions.map(s => ({
-      chat_id: s._id,
-      last_question_date: s.last_question_date,
-      first_question: s.first_question
-    }));
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+//     // Lấy tất cả chat_id của user, group by chat_id, sort theo thời gian mới nhất
+//     const sessions = await Question.aggregate([
+//       { $match: { account_id: typeof user_id === 'string' ? (user_id.length === 24 ? new (require('mongoose').Types.ObjectId)(user_id) : user_id) : user_id } },
+//       { $group: {
+//           _id: "$chat_id",
+//           last_question_date: { $max: "$question_date" },
+//           first_question: { $first: "$question_content" }
+//         }
+//       },
+//       { $sort: { last_question_date: -1 } }
+//     ]);
+//     const result = sessions.map(s => ({
+//       chat_id: s._id,
+//       last_question_date: s.last_question_date,
+//       first_question: s.first_question
+//     }));
+//     res.json(result);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 

@@ -11,12 +11,13 @@ const socketio = require('socket.io');
 
 const authRoutes = require('./routes/auth');
 const questionRoutes = require('./routes/question');
-const answerRoutes = require('./routes/answer');
+// const answerRoutes = require('./routes/answer');
 const legalDocumentRoutes = require('./routes/legalDocs');
 const legalClauseRoutes = require('./routes/legalClauses');
-const answerClauseRoutes = require('./routes/answerClauses');
+// const answerClauseRoutes = require('./routes/answerClauses');
 const notificationRoutes = require('./routes/notifications');
 const feedbackRoutes = require('./routes/feedbacks');
+const chatRoomRoutes = require('./routes/chatRoom');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,13 +44,13 @@ mongoose.connect(process.env.MONGODB_URI, {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
-app.use('/api/answers', answerRoutes);
+// app.use('/api/answers', answerRoutes);
 app.use('/api/legal-docs', legalDocumentRoutes);
 app.use('/api/legal-clauses', legalClauseRoutes);
-app.use('/api/answer-clauses', answerClauseRoutes);
+// app.use('/api/answer-clauses', answerClauseRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/feedbacks', feedbackRoutes);
-
+app.use('/api/chat-room', chatRoomRoutes);
 // Swagger UI
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 

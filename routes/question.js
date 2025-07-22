@@ -1,14 +1,9 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const controller = require("../controllers/QuestionController");
+const controller = require('../controllers/QuestionController');
+const { authenticateToken, authorize } = require("../middleware/auth");
 
-router.post("/", controller.create);
-router.get('/chat-sessions', controller.getChatSessions);
-router.get('/chat-history', controller.getChatHistory);
-router.get("/", controller.getAll);
-router.get("/:id", controller.getById);
-router.put("/:id", controller.update);
-router.delete("/:id", controller.delete);
-
+// Chỉ cho admin xem toàn bộ question
+router.get('/', authenticateToken, authorize('admin'), controller.getAll);
 
 module.exports = router;
