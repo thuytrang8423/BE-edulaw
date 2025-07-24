@@ -8,7 +8,7 @@
   "servers": [
     {
       "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Railway server"
+      "description": "Local server"
     }
   ],
   "paths": {
@@ -38,7 +38,9 @@
           }
         },
         "responses": {
-          "201": { "description": "User registered successfully. Verification code sent to email." },
+          "201": {
+            "description": "User registered successfully. Verification code sent to email."
+          },
           "409": { "description": "User with this email already exists" }
         }
       }
@@ -155,7 +157,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Password reset code sent if account exists" },
+          "200": {
+            "description": "Password reset code sent if account exists"
+          },
           "500": { "description": "Failed to send password reset code" }
         }
       }
@@ -251,7 +255,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id_token": { "type": "string", "description": "Google ID Token" }
+                  "id_token": {
+                    "type": "string",
+                    "description": "Google ID Token"
+                  }
                 },
                 "required": ["id_token"]
               },
@@ -262,9 +269,13 @@
           }
         },
         "responses": {
-          "200": { "description": "Login with Google successful. JWT tokens returned." },
+          "200": {
+            "description": "Login with Google successful. JWT tokens returned."
+          },
           "401": { "description": "Google login failed" },
-          "400": { "description": "Missing Google ID token or Google account has no email" }
+          "400": {
+            "description": "Missing Google ID token or Google account has no email"
+          }
         }
       }
     },
