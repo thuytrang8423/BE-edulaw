@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const fetch = require("node-fetch");
+// Thay require node-fetch bằng dynamic import để tránh lỗi ESM
+const fetch = (...args) =>
+  import("node-fetch").then((mod) => mod.default(...args));
 const { authenticateToken } = require("../middleware/auth");
 const answerController = require("../controllers/AnswerController");
 
@@ -9,14 +11,17 @@ router.post("/ask", authenticateToken, async (req, res) => {
   try {
     const token = req.headers["authorization"];
     const { answerContent } = req.body;
-    const response = await fetch("http://localhost:5171/api/Answer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(answerContent),
-    });
+    const response = await fetch(
+      "https://aichatbotlaw.onrender.com/api/Answer",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(answerContent),
+      }
+    );
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (err) {
