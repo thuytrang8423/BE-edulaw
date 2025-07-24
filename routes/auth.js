@@ -34,9 +34,15 @@ router.post(
   authController.login.bind(authController)
 );
 
-router.post("/verify-email-code", authController.verifyEmailCode.bind(authController));
+router.post(
+  "/verify-email-code",
+  authController.verifyEmailCode.bind(authController)
+);
 
-router.post("/resend-verification", authController.resendVerification.bind(authController));
+router.post(
+  "/resend-verification",
+  authController.resendVerification.bind(authController)
+);
 
 router.post(
   "/forgot-password",
@@ -54,17 +60,33 @@ router.post(
 
 router.post("/refresh-token", authController.refreshToken.bind(authController));
 
-router.post("/google", authController.loginWithGoogle.bind(authController));
-
 // Protected routes
-router.get("/me", authenticateToken, authController.getMe.bind(authController));
-router.post("/logout", authenticateToken, authController.logout.bind(authController));
-router.put('/profile', authenticateToken, authController.updateProfile.bind(authController));
+// Tách endpoint profile riêng
 
 // CRUD user (admin)
-router.get("/users", authenticateToken, authorize('admin'), authController.getAllUsers.bind(authController));
-router.get("/users/:id", authenticateToken, authorize('admin'), authController.getUserById.bind(authController));
-router.put("/users/:id", authenticateToken, authorize('admin'), authController.updateUser.bind(authController));
-router.delete("/users/:id", authenticateToken, authorize('admin'), authController.deleteUser.bind(authController));
+router.get(
+  "/users",
+  authenticateToken,
+  authorize("admin"),
+  authController.getAllUsers.bind(authController)
+);
+router.get(
+  "/users/:id",
+  authenticateToken,
+  authorize("admin"),
+  authController.getUserById.bind(authController)
+);
+router.put(
+  "/users/:id",
+  authenticateToken,
+  authorize("admin"),
+  authController.updateUser.bind(authController)
+);
+router.delete(
+  "/users/:id",
+  authenticateToken,
+  authorize("admin"),
+  authController.deleteUser.bind(authController)
+);
 
 module.exports = router;

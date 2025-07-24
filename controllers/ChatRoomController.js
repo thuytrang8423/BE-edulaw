@@ -599,10 +599,11 @@ exports.listRooms = async (req, res) => {
 exports.getRoomMessages = async (req, res) => {
   try {
     const { chat_id } = req.params;
-
-    // Use aggregation for better performance
+    const { account_id } = req.query; // Cho phép filter thêm theo user nếu cần
+    const match = { chat_id };
+    if (account_id) match.account_id = account_id;
     const chatHistory = await Question.aggregate([
-      { $match: { chat_id } },
+      { $match: match },
       { $sort: { question_date: 1 } },
       {
         $lookup: {
@@ -622,7 +623,6 @@ exports.getRoomMessages = async (req, res) => {
         },
       },
     ]);
-
     res.json({ success: true, data: chatHistory });
   } catch (err) {
     res.status(500).json({ error: err.message });

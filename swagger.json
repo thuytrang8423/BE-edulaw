@@ -6,9 +6,9 @@
     "description": "API documentation for the AI Chatbot for Education Laws."
   },
   "servers": [
-   {
-      "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Railway server"
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Local server"
     }
   ],
   "paths": {
@@ -243,7 +243,43 @@
         }
       }
     },
-  
+    "/auth/google": {
+      "post": {
+        "summary": "Login with Google OAuth (Expo/React Native/Web)",
+        "description": "FE lấy id_token từ Google (qua Expo AuthSession hoặc Google Identity Services), gửi lên backend để xác thực và nhận JWT.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_token": {
+                    "type": "string",
+                    "description": "Google ID Token"
+                  }
+                },
+                "required": ["id_token"]
+              },
+              "example": {
+                "id_token": "ya29.a0AfH6SMB..."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login with Google successful. JWT tokens returned."
+          },
+          "401": { "description": "Google login failed" },
+          "400": {
+            "description": "Missing Google ID token or Google account has no email"
+          }
+        }
+      }
+    },
+
     "/legal-docs": {
       "get": {
         "summary": "[USER/ADMIN] Get all legal documents",
@@ -267,7 +303,11 @@
                   "document_date_issue": { "type": "string", "format": "date" },
                   "document_signee": { "type": "string" }
                 },
-                "required": ["document_name", "document_type", "document_date_issue"]
+                "required": [
+                  "document_name",
+                  "document_type",
+                  "document_date_issue"
+                ]
               }
             }
           }
@@ -278,7 +318,7 @@
     "/legal-docs/upload": {
       "post": {
         "summary": "[ADMIN] Upload PDF, extract and save clauses",
-        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật, trích xuất và lưu các điều khoản vào database.",
+        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật, hệ thống tự động nhận diện dạng text hoặc scan (ảnh). Nếu là scan, sẽ tự động nhận diện tiếng Việt bằng OCR và trích xuất điều khoản.",
         "tags": ["LegalDocument"],
         "requestBody": {
           "required": true,
@@ -287,13 +327,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "document_name": { "type": "string" },
-                  "document_type": { "type": "string" },
-                  "document_date_issue": { "type": "string", "format": "date" },
-                  "document_signee": { "type": "string" },
                   "file": { "type": "string", "format": "binary" }
                 },
-                "required": ["document_name", "document_type", "document_date_issue", "file"]
+                "required": ["file"]
               }
             }
           }
@@ -306,13 +342,122 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": { "type": "string" },
-                    "document": { "type": "object" },
-                    "clauses_saved": { "type": "integer" }
+                    "success": { "type": "boolean" },
+                    "count": { "type": "integer" },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "type": { "type": "string" },
+                        "date": { "type": "string", "format": "date-time" }
+                      }
+                    },
+                    "clauses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "number": { "type": "string" },
+                          "title": { "type": "string" },
+                          "content": { "type": "string" }
+                        }
+                      }
+                    },
+                    "markdown": { "type": "string" },
+                    "json": { "type": "string" },
+                    "message": { "type": "string" }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "No file uploaded hoặc không trích xuất được điều khoản"
+          },
+          "500": {
+            "description": "Lỗi xử lý file hoặc trích xuất (bao gồm cả lỗi OCR)",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ocrError": {
+                    "summary": "Lỗi OCR hoặc chuyển PDF sang ảnh",
+                    "value": {
+                      "success": false,
+                      "error": "Không lấy được buffer ảnh từ pdf2pic. Kiểm tra lại phiên bản pdf2pic hoặc option truyền vào."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legal-docs/export-files": {
+      "post": {
+        "summary": "[ADMIN] Upload PDF and export files (no database save)",
+        "description": "Upload file PDF, trích xuất điều khoản và xuất ra file Markdown/JSON. Không lưu vào database.",
+        "tags": ["LegalDocument"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Xuất file thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "count": { "type": "integer" },
+                    "files": {
+                      "type": "object",
+                      "properties": {
+                        "markdown": {
+                          "type": "object",
+                          "properties": {
+                            "content": { "type": "string" },
+                            "filename": { "type": "string" }
+                          }
+                        },
+                        "json": {
+                          "type": "object",
+                          "properties": {
+                            "content": { "type": "string" },
+                            "filename": { "type": "string" }
+                          }
+                        },
+                        "raw": {
+                          "type": "object",
+                          "properties": {
+                            "content": { "type": "string" },
+                            "filename": { "type": "string" }
+                          }
+                        }
+                      }
+                    },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No file uploaded hoặc không trích xuất được điều khoản"
           },
           "500": { "description": "Lỗi xử lý file hoặc trích xuất" }
         }
@@ -324,16 +469,29 @@
         "description": "User và admin đều có thể xem chi tiết văn bản.",
         "tags": ["LegalDocument"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Legal document found" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Legal document found" },
+          "404": { "description": "Not found" }
+        }
       },
       "put": {
         "summary": "[ADMIN] Update legal document by ID",
         "description": "Chỉ admin mới được cập nhật văn bản.",
         "tags": ["LegalDocument"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -351,19 +509,136 @@
             }
           }
         },
-        "responses": { "200": { "description": "Legal document updated" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Legal document updated" },
+          "404": { "description": "Not found" }
+        }
       },
       "delete": {
         "summary": "[ADMIN] Delete legal document by ID",
         "description": "Chỉ admin mới được xóa văn bản.",
         "tags": ["LegalDocument"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Legal document deleted" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Legal document deleted" },
+          "404": { "description": "Not found" }
+        }
       }
     },
-    
+    "/legal-docs/clauses/{documentId}": {
+      "get": {
+        "summary": "[USER/ADMIN] Get all clauses of a legal document",
+        "description": "Lấy tất cả điều khoản của một văn bản pháp luật, sắp xếp theo số điều.",
+        "tags": ["LegalDocument"],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách điều khoản của văn bản",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "count": { "type": "integer" },
+                    "clauses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "number": { "type": "string" },
+                          "content": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Lỗi server" }
+        }
+      }
+    },
+    "/legal-docs/export/{documentId}": {
+      "get": {
+        "summary": "[USER/ADMIN] Export document from database to Markdown/JSON",
+        "description": "Xuất văn bản từ database ra file Markdown và JSON.",
+        "tags": ["LegalDocument"],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xuất document thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "count": { "type": "integer" },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "type": { "type": "string" },
+                        "date": { "type": "string", "format": "date-time" }
+                      }
+                    },
+                    "files": {
+                      "type": "object",
+                      "properties": {
+                        "markdown": {
+                          "type": "object",
+                          "properties": {
+                            "content": { "type": "string" },
+                            "filename": { "type": "string" }
+                          }
+                        },
+                        "json": {
+                          "type": "object",
+                          "properties": {
+                            "content": { "type": "string" },
+                            "filename": { "type": "string" }
+                          }
+                        }
+                      }
+                    },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Document not found" },
+          "400": { "description": "No clauses found for this document" },
+          "500": { "description": "Lỗi server" }
+        }
+      }
+    },
+
     "/legal-clauses": {
       "get": {
         "summary": "[USER/ADMIN] Get all legal clauses",
@@ -384,7 +659,10 @@
                 "properties": {
                   "clause_number": { "type": "string" },
                   "clause_content": { "type": "string" },
-                  "embedding": { "type": "array", "items": { "type": "number" } },
+                  "embedding": {
+                    "type": "array",
+                    "items": { "type": "number" }
+                  },
                   "document_id": { "type": "string" }
                 },
                 "required": ["clause_number", "clause_content", "document_id"]
@@ -439,16 +717,29 @@
         "description": "User và admin đều có thể xem chi tiết điều khoản.",
         "tags": ["LegalClause"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Legal clause found" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Legal clause found" },
+          "404": { "description": "Not found" }
+        }
       },
       "put": {
         "summary": "[ADMIN] Update legal clause by ID",
         "description": "Chỉ admin mới được cập nhật điều khoản.",
         "tags": ["LegalClause"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -459,26 +750,40 @@
                 "properties": {
                   "clause_number": { "type": "string" },
                   "clause_content": { "type": "string" },
-                  "embedding": { "type": "array", "items": { "type": "number" } },
+                  "embedding": {
+                    "type": "array",
+                    "items": { "type": "number" }
+                  },
                   "document_id": { "type": "string" }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Legal clause updated" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Legal clause updated" },
+          "404": { "description": "Not found" }
+        }
       },
       "delete": {
         "summary": "[ADMIN] Delete legal clause by ID",
         "description": "Chỉ admin mới được xóa điều khoản.",
         "tags": ["LegalClause"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Legal clause deleted" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Legal clause deleted" },
+          "404": { "description": "Not found" }
+        }
       }
     },
-    
+
     "/notifications": {
       "get": {
         "summary": "[USER/ADMIN] Get all notifications",
@@ -515,16 +820,29 @@
         "description": "User và admin đều có thể xem chi tiết thông báo.",
         "tags": ["Notification"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Notification found" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Notification found" },
+          "404": { "description": "Not found" }
+        }
       },
       "put": {
         "summary": "[ADMIN] Update notification by ID",
         "description": "Chỉ admin mới được cập nhật thông báo.",
         "tags": ["Notification"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -541,19 +859,30 @@
             }
           }
         },
-        "responses": { "200": { "description": "Notification updated" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Notification updated" },
+          "404": { "description": "Not found" }
+        }
       },
       "delete": {
         "summary": "[ADMIN] Delete notification by ID",
         "description": "Chỉ admin mới được xóa thông báo.",
         "tags": ["Notification"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Notification deleted" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Notification deleted" },
+          "404": { "description": "Not found" }
+        }
       }
     },
-    
+
     "/questions": {
       "get": {
         "summary": "[ADMIN] Get all questions",
@@ -577,7 +906,7 @@
         }
       }
     },
-    
+
     "/feedbacks": {
       "post": {
         "summary": "[USER] Gửi feedback về hệ thống",
@@ -613,7 +942,12 @@
         "description": "Admin cập nhật trạng thái hoặc nội dung feedback.",
         "tags": ["Feedback"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -629,16 +963,27 @@
             }
           }
         },
-        "responses": { "200": { "description": "Feedback updated" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Feedback updated" },
+          "404": { "description": "Not found" }
+        }
       },
       "delete": {
         "summary": "[ADMIN] Xóa feedback",
         "description": "Admin xóa góp ý/phản hồi.",
         "tags": ["Feedback"],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
-        "responses": { "200": { "description": "Feedback deleted" }, "404": { "description": "Not found" } }
+        "responses": {
+          "200": { "description": "Feedback deleted" },
+          "404": { "description": "Not found" }
+        }
       }
     },
     "/auth/users": {
@@ -671,10 +1016,22 @@
         "tags": ["User"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
-          "200": { "description": "User found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
           "401": { "description": "Unauthorized" },
           "403": { "description": "Forbidden" },
           "404": { "description": "User not found" }
@@ -686,7 +1043,12 @@
         "tags": ["User"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -702,7 +1064,14 @@
           }
         },
         "responses": {
-          "200": { "description": "User updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "200": {
+            "description": "User updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
           "401": { "description": "Unauthorized" },
           "403": { "description": "Forbidden" },
           "404": { "description": "User not found" }
@@ -714,7 +1083,12 @@
         "tags": ["User"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": { "description": "User deleted" },
@@ -772,6 +1146,7 @@
     "/chat-room/create": {
       "post": {
         "summary": "Tạo phòng chat mới",
+        "description": "Tạo phòng chat mới cho user với chat_id tự động sinh.",
         "tags": ["ChatRoom"],
         "requestBody": {
           "required": true,
@@ -780,8 +1155,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "account_id": { "type": "string" },
-                  "room_name": { "type": "string" }
+                  "account_id": {
+                    "type": "string",
+                    "description": "ID của user tạo phòng chat"
+                  },
+                  "room_name": {
+                    "type": "string",
+                    "description": "Tên phòng chat (optional)"
+                  }
                 },
                 "required": ["account_id"]
               },
@@ -806,6 +1187,19 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Dữ liệu đầu vào không hợp lệ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -813,9 +1207,16 @@
     "/chat-room/list": {
       "get": {
         "summary": "Lấy danh sách phòng chat của user",
+        "description": "Lấy tất cả phòng chat của một user theo account_id.",
         "tags": ["ChatRoom"],
         "parameters": [
-          { "name": "account_id", "in": "query", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": true,
+            "description": "ID của user để lấy danh sách phòng chat",
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": {
@@ -828,13 +1229,27 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Thiếu account_id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
     "/chat-room/message/send": {
       "post": {
-        "summary": "Gửi tin nhắn vào phòng chat (tự động sinh answer)",
+        "summary": "Gửi tin nhắn vào phòng chat (tự động sinh answer với AI)",
+        "description": "Gửi câu hỏi, hệ thống sẽ tìm kiếm điều khoản liên quan và tạo câu trả lời bằng AI (Gemini).",
         "tags": ["ChatRoom"],
         "requestBody": {
           "required": true,
@@ -843,14 +1258,23 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "question_content": { "type": "string" },
-                  "account_id": { "type": "string" },
-                  "chat_id": { "type": "string" }
+                  "question_content": {
+                    "type": "string",
+                    "description": "Nội dung câu hỏi về pháp luật"
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "ID của user gửi câu hỏi"
+                  },
+                  "chat_id": {
+                    "type": "string",
+                    "description": "ID phòng chat (optional, sẽ tự tạo nếu không có)"
+                  }
                 },
-                "required": ["question_content", "account_id", "chat_id"]
+                "required": ["question_content", "account_id"]
               },
               "example": {
-                "question_content": "Quy định về nghỉ thai sản?",
+                "question_content": "Quy định về nghỉ thai sản theo luật lao động?",
                 "account_id": "user_id",
                 "chat_id": "chat_id_phong"
               }
@@ -865,10 +1289,108 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "question": { "$ref": "#/components/schemas/Question" },
-                    "answer": { "$ref": "#/components/schemas/Answer" },
-                    "clauses": { "type": "array", "items": { "$ref": "#/components/schemas/LegalClause" } },
-                    "chat_id": { "type": "string" }
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "string" },
+                            "content": { "type": "string" },
+                            "date": { "type": "string", "format": "date-time" }
+                          }
+                        },
+                        "answer": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "string" },
+                            "ai_response": {
+                              "type": "string",
+                              "description": "Câu trả lời ngắn gọn của AI"
+                            },
+                            "full_content": {
+                              "type": "string",
+                              "description": "Câu trả lời đầy đủ bao gồm cả điều khoản"
+                            },
+                            "date": { "type": "string", "format": "date-time" }
+                          }
+                        },
+                        "related_clauses": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "stt": { "type": "integer" },
+                              "dieu": { "type": "string" },
+                              "noi_dung": { "type": "string" },
+                              "van_ban": { "type": "string" },
+                              "document_id": { "type": "string" }
+                            }
+                          }
+                        },
+                        "chat_id": { "type": "string" },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "keyword_used": { "type": "string" },
+                            "search_terms": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "clauses_found": { "type": "integer" },
+                            "documents_involved": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu đầu vào không hợp lệ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "error": { "type": "string" },
+                    "details": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "error": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "error": { "type": "string" },
+                    "message": { "type": "string" }
                   }
                 }
               }
@@ -880,9 +1402,16 @@
     "/chat-room/{chat_id}/messages": {
       "get": {
         "summary": "Lấy lịch sử chat của phòng",
+        "description": "Lấy tất cả tin nhắn (question-answer pairs) trong một phòng chat.",
         "tags": ["ChatRoom"],
         "parameters": [
-          { "name": "chat_id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "description": "ID của phòng chat",
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": {
@@ -892,6 +1421,19 @@
                 "schema": {
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/ChatMessage" }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
                 }
               }
             }
@@ -905,7 +1447,8 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "Nhập JWT token vào đây. Ví dụ: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       }
     },
     "schemas": {
@@ -1012,7 +1555,64 @@
           "answer_date": { "type": "string", "format": "date-time" },
           "chat_id": { "type": "string" }
         }
+      },
+      "ChatResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "content": { "type": "string" },
+                  "date": { "type": "string", "format": "date-time" }
+                }
+              },
+              "answer": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "ai_response": { "type": "string" },
+                  "full_content": { "type": "string" },
+                  "date": { "type": "string", "format": "date-time" }
+                }
+              },
+              "related_clauses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "stt": { "type": "integer" },
+                    "dieu": { "type": "string" },
+                    "noi_dung": { "type": "string" },
+                    "van_ban": { "type": "string" },
+                    "document_id": { "type": "string" }
+                  }
+                }
+              },
+              "chat_id": { "type": "string" },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "keyword_used": { "type": "string" },
+                  "search_terms": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "clauses_found": { "type": "integer" },
+                  "documents_involved": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
-} 
+}

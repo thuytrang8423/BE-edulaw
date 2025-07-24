@@ -5,5 +5,6 @@ const LegalDocumentSchema = new mongoose.Schema({
   document_type: { type: String, required: true },
   document_date_issue: { type: Date, required: true },
   document_signee: { type: String },
+  document_url: { type: String },
 });
 module.exports = mongoose.model("LegalDocument", LegalDocumentSchema);
