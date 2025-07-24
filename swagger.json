@@ -6,9 +6,9 @@
     "description": "API documentation for the AI Chatbot for Education Laws."
   },
   "servers": [
-    {
+   {
       "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Local server"
+      "description": "Railway server"
     }
   ],
   "paths": {
