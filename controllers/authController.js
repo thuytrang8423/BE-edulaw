@@ -1,25 +1,30 @@
-const User = require('../models/User');
-const emailService = require('../services/emailService');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const { OAuth2Client } = require('google-auth-library');
+const User = require("../models/User");
+const emailService = require("../services/emailService");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const { OAuth2Client } = require("google-auth-library");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const admin = require("firebase-admin");
+// Khởi tạo Firebase Admin ở đầu file (chỉ cần 1 lần trong app)
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      require("../firebase-service-account.json")
+    ),
+  });
+}
 
 class AuthController {
   // Generate JWT tokens
   generateTokens(userId) {
-    const accessToken = jwt.sign(
-      { userId },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
-    );
+    const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || "15m",
+    });
 
-    const refreshToken = jwt.sign(
-      { userId },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
-    );
+    const refreshToken = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, {
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+    });
 
     return { accessToken, refreshToken };
   }
@@ -32,8 +37,8 @@ class AuthController {
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res.status(409).json({ 
-          message: 'User with this email already exists' 
+        return res.status(409).json({
+          message: "User with this email already exists",
         });
       }
 
@@ -42,7 +47,7 @@ class AuthController {
         name,
         email,
         password,
-        role: 'user'
+        role: "user",
       });
 
       // Generate 6-digit code
@@ -53,23 +58,27 @@ class AuthController {
       try {
         await emailService.sendVerificationEmail(user, code);
       } catch (emailError) {
-        console.error('Email sending failed:', emailError);
+        console.error("Email sending failed:", emailError);
       }
 
       res.status(201).json({
-        message: 'User registered successfully. Please check your email for the verification code.',
+        message:
+          "User registered successfully. Please check your email for the verification code.",
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
-          isEmailVerified: user.isEmailVerified
-        }
+          isEmailVerified: user.isEmailVerified,
+        },
       });
     } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ 
-        message: 'Registration failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      console.error("Registration error:", error);
+      res.status(500).json({
+        message: "Registration failed",
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   }
@@ -80,13 +89,17 @@ class AuthController {
       const { email, code } = req.body;
       const user = await User.findOne({ email });
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
       if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-        return res.status(400).json({ message: 'No verification code found. Please request a new one.' });
+        return res.status(400).json({
+          message: "No verification code found. Please request a new one.",
+        });
       }
       if (!user.verifyEmailCode(code)) {
-        return res.status(400).json({ message: 'Invalid or expired verification code' });
+        return res
+          .status(400)
+          .json({ message: "Invalid or expired verification code" });
       }
       user.isEmailVerified = true;
       user.emailVerificationCode = undefined;
@@ -97,22 +110,22 @@ class AuthController {
       try {
         await emailService.sendWelcomeEmail(user);
       } catch (emailError) {
-        console.error('Welcome email failed:', emailError);
+        console.error("Welcome email failed:", emailError);
       }
 
       res.json({
-        message: 'Email verified successfully',
+        message: "Email verified successfully",
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
-          isEmailVerified: user.isEmailVerified
-        }
+          isEmailVerified: user.isEmailVerified,
+        },
       });
     } catch (error) {
-      console.error('Email code verification error:', error);
-      res.status(500).json({ message: 'Email verification failed' });
+      console.error("Email code verification error:", error);
+      res.status(500).json({ message: "Email verification failed" });
     }
   }
 
@@ -123,11 +136,11 @@ class AuthController {
 
       const user = await User.findOne({ email });
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
 
       if (user.isEmailVerified) {
-        return res.status(400).json({ message: 'Email is already verified' });
+        return res.status(400).json({ message: "Email is already verified" });
       }
 
       // Generate new 6-digit code
@@ -137,11 +150,10 @@ class AuthController {
       // Send verification email with code
       await emailService.sendVerificationEmail(user, code);
 
-      res.json({ message: 'Verification email sent successfully' });
-
+      res.json({ message: "Verification email sent successfully" });
     } catch (error) {
-      console.error('Resend verification error:', error);
-      res.status(500).json({ message: 'Failed to resend verification email' });
+      console.error("Resend verification error:", error);
+      res.status(500).json({ message: "Failed to resend verification email" });
     }
   }
 
@@ -151,21 +163,24 @@ class AuthController {
       const { email, password } = req.body;
 
       // Find user and include password for comparison
-      const user = await User.findOne({ email }).select('+password');
+      const user = await User.findOne({ email }).select("+password");
       if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Check if account is locked
       if (user.isLocked) {
-        return res.status(423).json({ 
-          message: 'Account temporarily locked due to too many failed login attempts' 
+        return res.status(423).json({
+          message:
+            "Account temporarily locked due to too many failed login attempts",
         });
       }
 
       // Check if account is active
       if (!user.isActive) {
-        return res.status(403).json({ message: 'Account has been deactivated' });
+        return res
+          .status(403)
+          .json({ message: "Account has been deactivated" });
       }
 
       // Compare password
@@ -173,7 +188,7 @@ class AuthController {
       if (!isPasswordValid) {
         // Increment failed login attempts
         await user.incLoginAttempts();
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Reset login attempts on successful login
@@ -182,7 +197,7 @@ class AuthController {
           { _id: user._id },
           {
             $unset: { loginAttempts: 1, lockUntil: 1 },
-            $set: { lastLoginAt: new Date() }
+            $set: { lastLoginAt: new Date() },
           }
         );
       } else {
@@ -194,7 +209,7 @@ class AuthController {
       const { accessToken, refreshToken } = this.generateTokens(user._id);
 
       res.json({
-        message: 'Login successful',
+        message: "Login successful",
         accessToken,
         refreshToken,
         user: {
@@ -202,15 +217,17 @@ class AuthController {
           name: user.name,
           email: user.email,
           role: user.role,
-          isEmailVerified: user.isEmailVerified
-        }
+          isEmailVerified: user.isEmailVerified,
+        },
       });
-
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ 
-        message: 'Login failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      console.error("Login error:", error);
+      res.status(500).json({
+        message: "Login failed",
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   }
@@ -221,26 +238,26 @@ class AuthController {
       const { refreshToken } = req.body;
 
       if (!refreshToken) {
-        return res.status(401).json({ message: 'Refresh token required' });
+        return res.status(401).json({ message: "Refresh token required" });
       }
 
       const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
       const user = await User.findById(decoded.userId);
 
       if (!user || !user.isActive) {
-        return res.status(401).json({ message: 'Invalid refresh token' });
+        return res.status(401).json({ message: "Invalid refresh token" });
       }
 
-      const { accessToken, refreshToken: newRefreshToken } = this.generateTokens(user._id);
+      const { accessToken, refreshToken: newRefreshToken } =
+        this.generateTokens(user._id);
 
       res.json({
         accessToken,
-        refreshToken: newRefreshToken
+        refreshToken: newRefreshToken,
       });
-
     } catch (error) {
-      console.error('Token refresh error:', error);
-      res.status(401).json({ message: 'Invalid refresh token' });
+      console.error("Token refresh error:", error);
+      res.status(401).json({ message: "Invalid refresh token" });
     }
   }
 
@@ -252,8 +269,9 @@ class AuthController {
       const user = await User.findOne({ email });
       if (!user) {
         // Don't reveal if email exists or not for security
-        return res.json({ 
-          message: 'If an account with that email exists, we have sent a password reset code.' 
+        return res.json({
+          message:
+            "If an account with that email exists, we have sent a password reset code.",
         });
       }
 
@@ -265,22 +283,22 @@ class AuthController {
       try {
         await emailService.sendPasswordResetEmail(user, code);
       } catch (emailError) {
-        console.error('Password reset email failed:', emailError);
+        console.error("Password reset email failed:", emailError);
         user.emailVerificationCode = undefined;
         user.emailVerificationExpires = undefined;
         await user.save();
-        return res.status(500).json({ 
-          message: 'Failed to send password reset email. Please try again.' 
+        return res.status(500).json({
+          message: "Failed to send password reset email. Please try again.",
         });
       }
 
-      res.json({ 
-        message: 'If an account with that email exists, we have sent a password reset code.' 
+      res.json({
+        message:
+          "If an account with that email exists, we have sent a password reset code.",
       });
-
     } catch (error) {
-      console.error('Forgot password error:', error);
-      res.status(500).json({ message: 'Password reset request failed' });
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Password reset request failed" });
     }
   }
 
@@ -290,13 +308,15 @@ class AuthController {
       const { email, code, password } = req.body;
       const user = await User.findOne({ email });
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
       if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-        return res.status(400).json({ message: 'No reset code found. Please request a new one.' });
+        return res
+          .status(400)
+          .json({ message: "No reset code found. Please request a new one." });
       }
       if (!user.verifyEmailCode(code)) {
-        return res.status(400).json({ message: 'Invalid or expired code' });
+        return res.status(400).json({ message: "Invalid or expired code" });
       }
       user.password = password;
       user.emailVerificationCode = undefined;
@@ -304,10 +324,10 @@ class AuthController {
       user.loginAttempts = 0;
       user.lockUntil = undefined;
       await user.save();
-      res.json({ message: 'Password reset successfully' });
+      res.json({ message: "Password reset successfully" });
     } catch (error) {
-      console.error('Password reset error:', error);
-      res.status(500).json({ message: 'Password reset failed' });
+      console.error("Password reset error:", error);
+      res.status(500).json({ message: "Password reset failed" });
     }
   }
 
@@ -316,28 +336,24 @@ class AuthController {
     try {
       const { id_token } = req.body;
       if (!id_token) {
-        return res.status(400).json({ message: 'Missing Google ID token' });
+        return res.status(400).json({ message: "Missing Google ID token" });
       }
-      // Verify Google token
-      const ticket = await googleClient.verifyIdToken({
-        idToken: id_token,
-        audience: GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      const email = payload.email;
-      const name = payload.name;
+      // Xác thực id_token với Firebase
+      const decodedToken = await admin.auth().verifyIdToken(id_token);
+      const email = decodedToken.email;
+      const name = decodedToken.name || email.split("@")[0];
       if (!email) {
-        return res.status(400).json({ message: 'Google account has no email' });
+        return res.status(400).json({ message: "Google account has no email" });
       }
       // Find or create user
       let user = await User.findOne({ email });
       if (!user) {
         user = new User({
-          name: name || email.split('@')[0],
+          name,
           email,
           isEmailVerified: true,
-          role: 'user',
-          password: Math.random().toString(36).slice(-8) // random password, not used
+          role: "user",
+          password: Math.random().toString(36).slice(-8), // random password, not used
         });
         await user.save();
       } else if (!user.isEmailVerified) {
@@ -347,7 +363,7 @@ class AuthController {
       // Generate tokens
       const { accessToken, refreshToken } = this.generateTokens(user._id);
       res.json({
-        message: 'Login with Google successful',
+        message: "Login with Google successful",
         accessToken,
         refreshToken,
         user: {
@@ -355,12 +371,12 @@ class AuthController {
           name: user.name,
           email: user.email,
           role: user.role,
-          isEmailVerified: user.isEmailVerified
-        }
+          isEmailVerified: user.isEmailVerified,
+        },
       });
     } catch (error) {
-      console.error('Google login error:', error);
-      res.status(401).json({ message: 'Google login failed' });
+      console.error("Google login error:", error);
+      res.status(401).json({ message: "Google login failed" });
     }
   }
 
@@ -368,7 +384,7 @@ class AuthController {
   async getMe(req, res) {
     try {
       const user = await User.findById(req.user.id);
-      
+
       res.json({
         user: {
           id: user._id,
@@ -377,12 +393,12 @@ class AuthController {
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt
-        }
+          lastLoginAt: user.lastLoginAt,
+        },
       });
     } catch (error) {
-      console.error('Get me error:', error);
-      res.status(500).json({ message: 'Failed to get user information' });
+      console.error("Get me error:", error);
+      res.status(500).json({ message: "Failed to get user information" });
     }
   }
 
@@ -392,7 +408,7 @@ class AuthController {
       const users = await User.find();
       res.json(users);
     } catch (error) {
-      res.status(500).json({ message: 'Failed to get users' });
+      res.status(500).json({ message: "Failed to get users" });
     }
   }
 
@@ -400,21 +416,23 @@ class AuthController {
   async getUserById(req, res) {
     try {
       const user = await User.findById(req.params.id);
-      if (!user) return res.status(404).json({ message: 'User not found' });
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.json(user);
     } catch (error) {
-      res.status(500).json({ message: 'Failed to get user' });
+      res.status(500).json({ message: "Failed to get user" });
     }
   }
 
   // Cập nhật user (admin)
   async updateUser(req, res) {
     try {
-      const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
-      if (!user) return res.status(404).json({ message: 'User not found' });
+      const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+      });
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.json(user);
     } catch (error) {
-      res.status(500).json({ message: 'Failed to update user' });
+      res.status(500).json({ message: "Failed to update user" });
     }
   }
 
@@ -422,16 +440,16 @@ class AuthController {
   async deleteUser(req, res) {
     try {
       const user = await User.findByIdAndDelete(req.params.id);
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      res.json({ message: 'User deleted' });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json({ message: "User deleted" });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to delete user' });
+      res.status(500).json({ message: "Failed to delete user" });
     }
   }
 
   // Logout (optional - mainly for clearing client-side tokens)
   async logout(req, res) {
-    res.json({ message: 'Logout successful' });
+    res.json({ message: "Logout successful" });
   }
 
   // Cập nhật profile cho user hoặc admin (phải login, chỉ cập nhật chính mình)
@@ -444,20 +462,20 @@ class AuthController {
       if (name) update.name = name;
       if (email) update.email = email;
       const user = await User.findByIdAndUpdate(userId, update, { new: true });
-      if (!user) return res.status(404).json({ message: 'User not found' });
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.json({
-        message: 'Profile updated successfully',
+        message: "Profile updated successfully",
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
           isEmailVerified: user.isEmailVerified,
-          createdAt: user.createdAt
-        }
+          createdAt: user.createdAt,
+        },
       });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to update profile' });
+      res.status(500).json({ message: "Failed to update profile" });
     }
   }
 }
