@@ -243,43 +243,7 @@
         }
       }
     },
-    "/auth/google": {
-      "post": {
-        "summary": "Login with Google OAuth (Expo/React Native/Web)",
-        "description": "FE lấy id_token từ Google (qua Expo AuthSession hoặc Google Identity Services), gửi lên backend để xác thực và nhận JWT.",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id_token": {
-                    "type": "string",
-                    "description": "Google ID Token"
-                  }
-                },
-                "required": ["id_token"]
-              },
-              "example": {
-                "id_token": "ya29.a0AfH6SMB..."
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Login with Google successful. JWT tokens returned."
-          },
-          "401": { "description": "Google login failed" },
-          "400": {
-            "description": "Missing Google ID token or Google account has no email"
-          }
-        }
-      }
-    },
-    
+  
     "/legal-docs": {
       "get": {
         "summary": "[USER/ADMIN] Get all legal documents",
