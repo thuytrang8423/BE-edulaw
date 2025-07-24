@@ -5,15 +5,6 @@ const crypto = require("crypto");
 const { OAuth2Client } = require("google-auth-library");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
-const admin = require("firebase-admin");
-// Khởi tạo Firebase Admin ở đầu file (chỉ cần 1 lần trong app)
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(
-      require("../firebase-service-account.json")
-    ),
-  });
-}
 
 class AuthController {
   // Generate JWT tokens
@@ -328,55 +319,6 @@ class AuthController {
     } catch (error) {
       console.error("Password reset error:", error);
       res.status(500).json({ message: "Password reset failed" });
-    }
-  }
-
-  // Google login
-  async loginWithGoogle(req, res) {
-    try {
-      const { id_token } = req.body;
-      if (!id_token) {
-        return res.status(400).json({ message: "Missing Google ID token" });
-      }
-      // Xác thực id_token với Firebase
-      const decodedToken = await admin.auth().verifyIdToken(id_token);
-      const email = decodedToken.email;
-      const name = decodedToken.name || email.split("@")[0];
-      if (!email) {
-        return res.status(400).json({ message: "Google account has no email" });
-      }
-      // Find or create user
-      let user = await User.findOne({ email });
-      if (!user) {
-        user = new User({
-          name,
-          email,
-          isEmailVerified: true,
-          role: "user",
-          password: Math.random().toString(36).slice(-8), // random password, not used
-        });
-        await user.save();
-      } else if (!user.isEmailVerified) {
-        user.isEmailVerified = true;
-        await user.save();
-      }
-      // Generate tokens
-      const { accessToken, refreshToken } = this.generateTokens(user._id);
-      res.json({
-        message: "Login with Google successful",
-        accessToken,
-        refreshToken,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isEmailVerified: user.isEmailVerified,
-        },
-      });
-    } catch (error) {
-      console.error("Google login error:", error);
-      res.status(401).json({ message: "Google login failed" });
     }
   }
 
