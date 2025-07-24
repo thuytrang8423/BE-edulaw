@@ -4,6 +4,8 @@ const axios = require("axios");
 const multer = require("multer");
 const FormData = require("form-data");
 const router = express.Router();
+const https = require("https");
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const JWT_CONFIG = {
   secret: "supersecretkey123",
@@ -41,6 +43,7 @@ router.post("/createQuestion", authenticateJWT, async (req, res) => {
       req.body,
       {
         headers: { Authorization: req.headers.authorization },
+        httpsAgent,
       }
     );
     res.status(result.status).json(result.data);
@@ -72,6 +75,7 @@ router.post(
             ...form.getHeaders(),
             Authorization: req.headers.authorization,
           },
+          httpsAgent,
         }
       );
       res.status(result.status).json(result.data);
@@ -91,6 +95,7 @@ router.put("/legal/chapter", authenticateJWT, async (req, res) => {
       req.body,
       {
         headers: { Authorization: req.headers.authorization },
+        httpsAgent,
       }
     );
     res.status(result.status).json(result.data);
@@ -108,6 +113,7 @@ router.get("/legal", authenticateJWT, async (req, res) => {
       "https://aichatbotlaw.onrender.com/api/Legal",
       {
         headers: { Authorization: req.headers.authorization },
+        httpsAgent,
       }
     );
     res.status(result.status).json(result.data);
@@ -125,6 +131,7 @@ router.get("/question/:id", authenticateJWT, async (req, res) => {
       `https://aichatbotlaw.onrender.com/api/Question/${req.params.id}`,
       {
         headers: { Authorization: req.headers.authorization },
+        httpsAgent,
       }
     );
     res.status(result.status).json(result.data);
@@ -144,6 +151,7 @@ router.post("/question", authenticateJWT, async (req, res) => {
       : "https://aichatbotlaw.onrender.com/api/Question";
     const result = await axios.post(url, req.body, {
       headers: { Authorization: req.headers.authorization },
+      httpsAgent,
     });
     res.status(result.status).json(result.data);
   } catch (err) {
@@ -163,6 +171,7 @@ router.get(
         `https://aichatbotlaw.onrender.com/api/Question/daily-history/${req.params.userId}`,
         {
           headers: { Authorization: req.headers.authorization },
+          httpsAgent,
         }
       );
       res.status(result.status).json(result.data);
@@ -184,6 +193,7 @@ router.get("/answer", authenticateJWT, async (req, res) => {
     }`;
     const result = await axios.get(url, {
       headers: { Authorization: req.headers.authorization },
+      httpsAgent,
     });
     res.status(result.status).json(result.data);
   } catch (err) {

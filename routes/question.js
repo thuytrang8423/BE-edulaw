@@ -5,6 +5,8 @@ const { authenticateToken, authorize } = require("../middleware/auth");
 // Thay require node-fetch bằng dynamic import để tránh lỗi ESM
 const fetch = (...args) =>
   import("node-fetch").then((mod) => mod.default(...args));
+const https = require("https");
+const agent = new https.Agent({ rejectUnauthorized: false });
 
 // Chỉ cho admin xem toàn bộ question
 router.get("/", authenticateToken, authorize("admin"), controller.getAll);
@@ -23,6 +25,7 @@ router.post("/ask", authenticateToken, async (req, res) => {
           Authorization: token,
         },
         body: JSON.stringify(questionContent),
+        agent,
       }
     );
     const data = await response.json();

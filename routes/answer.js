@@ -3,6 +3,8 @@ const router = express.Router();
 // Thay require node-fetch bằng dynamic import để tránh lỗi ESM
 const fetch = (...args) =>
   import("node-fetch").then((mod) => mod.default(...args));
+const https = require("https");
+const agent = new https.Agent({ rejectUnauthorized: false });
 const { authenticateToken } = require("../middleware/auth");
 const answerController = require("../controllers/AnswerController");
 
@@ -20,6 +22,7 @@ router.post("/ask", authenticateToken, async (req, res) => {
           Authorization: token,
         },
         body: JSON.stringify(answerContent),
+        agent,
       }
     );
     const data = await response.json();

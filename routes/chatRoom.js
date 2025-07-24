@@ -19,7 +19,7 @@ router.post("/message/send", async (req, res) => {
     const response = await axios.post(
       `https://aichatbotlaw.onrender.com/api/Question?userId=${userId}`,
       req.body,
-      { headers: req.headers }
+      { headers: req.headers, httpsAgent: agent }
     );
     const duration = Date.now() - start;
     console.log(
