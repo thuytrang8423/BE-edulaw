@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Railway server"
+      "url": "http://localhost:5000/api",
+      "description": "Local server"
     }
   ],
   "paths": {
@@ -982,6 +982,11 @@
                 "properties": {
                   "name": { "type": "string" },
                   "email": { "type": "string", "format": "email" },
+                  "role": {
+                    "type": "string",
+                    "enum": ["user", "admin"],
+                    "description": "Quyền user hoặc admin"
+                  },
                   "avatar": {
                     "type": "string",
                     "format": "binary",
@@ -1000,14 +1005,31 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "_id": { "type": "string" },
-                    "name": { "type": "string" },
-                    "email": { "type": "string" },
-                    "role": { "type": "string" },
-                    "isEmailVerified": { "type": "boolean" },
-                    "avatar": {
-                      "type": "string",
-                      "description": "URL ảnh đại diện"
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "_id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "email": { "type": "string" },
+                        "role": { "type": "string" },
+                        "isEmailVerified": { "type": "boolean" },
+                        "avatar": {
+                          "type": "string",
+                          "description": "URL ảnh đại diện"
+                        },
+                        "avatarFile": {
+                          "type": "string",
+                          "description": "Cloudinary publicId"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lastLoginAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
                     }
                   }
                 }
@@ -1086,7 +1108,28 @@
                   "type": "object",
                   "properties": {
                     "message": { "type": "string" },
-                    "user": { "$ref": "#/components/schemas/User" }
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "email": { "type": "string" },
+                        "role": { "type": "string" },
+                        "isEmailVerified": { "type": "boolean" },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "avatar": {
+                          "type": "string",
+                          "description": "URL ảnh đại diện"
+                        },
+                        "avatarFile": {
+                          "type": "string",
+                          "description": "Cloudinary publicId"
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -1110,6 +1153,11 @@
                 "properties": {
                   "name": { "type": "string" },
                   "email": { "type": "string", "format": "email" },
+                  "role": {
+                    "type": "string",
+                    "enum": ["user", "admin"],
+                    "description": "Quyền user hoặc admin"
+                  },
                   "avatar": {
                     "type": "string",
                     "format": "binary",
@@ -1144,6 +1192,10 @@
                         "avatar": {
                           "type": "string",
                           "description": "URL ảnh đại diện"
+                        },
+                        "avatarFile": {
+                          "type": "string",
+                          "description": "Cloudinary publicId"
                         }
                       }
                     }

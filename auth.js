@@ -1,95 +1,96 @@
-const express = require("express");
-const router = express.Router();
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const AuthController = require("../controllers/authController");
-const authController = new AuthController();
-const {
+// Verify JWT token
+const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({ message: "Access token required" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Invalid token - user not found" });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ message: "Account has been deactivated" });
+    }
+
+    if (user.isLocked) {
+      return res.status(423).json({ message: "Account is temporarily locked" });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired" });
+    }
+    res.status(500).json({ message: "Token verification failed" });
+  }
+};
+
+// Check if email is verified
+const requireEmailVerification = (req, res, next) => {
+  if (!req.user.isEmailVerified) {
+    return res.status(403).json({
+      message: "Email verification required",
+      action: "EMAIL_VERIFICATION_REQUIRED",
+    });
+  }
+  next();
+};
+
+// Role-based authorization
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Access denied. Insufficient permissions.",
+      });
+    }
+    next();
+  };
+};
+
+// Rate limiting for sensitive operations
+const createAccountLimiter = require("express-rate-limit")({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 100, // 100 accounts per 10 minutes
+  message: {
+    message:
+      "Too many accounts created from this IP, please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const loginLimiter = require("express-rate-limit")({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 login attempts per 15 minutes
+  message: {
+    message:
+      "Too many login attempts from this IP, please try again after 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = {
   authenticateToken,
-  createAccountLimiter,
-  loginLimiter,
+  requireEmailVerification,
   authorize,
-} = require("../middleware/auth");
-const {
-  registerValidation,
-  loginValidation,
-  forgotPasswordValidation,
-  resetPasswordValidation,
-  handleValidationErrors,
-} = require("../middleware/validation");
-const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
-
-// Public routes
-router.post(
-  "/register",
   createAccountLimiter,
-  registerValidation,
-  handleValidationErrors,
-  authController.register.bind(authController)
-);
-
-router.post(
-  "/login",
   loginLimiter,
-  loginValidation,
-  handleValidationErrors,
-  authController.login.bind(authController)
-);
-
-router.post(
-  "/verify-email-code",
-  authController.verifyEmailCode.bind(authController)
-);
-
-router.post(
-  "/resend-verification",
-  authController.resendVerification.bind(authController)
-);
-
-router.post(
-  "/forgot-password",
-  forgotPasswordValidation,
-  handleValidationErrors,
-  authController.forgotPassword.bind(authController)
-);
-
-router.post(
-  "/reset-password",
-  resetPasswordValidation,
-  handleValidationErrors,
-  authController.resetPassword.bind(authController)
-);
-
-router.post("/refresh-token", authController.refreshToken.bind(authController));
-
-// Protected routes
-// Tách endpoint profile riêng
-
-// CRUD user (admin)
-router.get(
-  "/users",
-  authenticateToken,
-  authorize("admin"),
-  authController.getAllUsers.bind(authController)
-);
-router.get(
-  "/users/:id",
-  authenticateToken,
-  authorize("admin"),
-  authController.getUserById.bind(authController)
-);
-router.put(
-  "/users/:id",
-  authenticateToken,
-  authorize("admin"),
-  upload.single("avatar"),
-  authController.updateUser.bind(authController)
-);
-router.delete(
-  "/users/:id",
-  authenticateToken,
-  authorize("admin"),
-  authController.deleteUser.bind(authController)
-);
-
-module.exports = router;
+};
