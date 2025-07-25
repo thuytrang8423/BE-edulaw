@@ -328,7 +328,39 @@
                         }
                       }
                     },
-                    "message": { "type": "string" }
+                    "message": { "type": "string" },
+                    "example": {
+                      "success": true,
+                      "chapterCount": 3,
+                      "chapters": [
+                        "Chương I. Quy định chung",
+                        "Chương II. Quyền và nghĩa vụ",
+                        "Chương III. Điều khoản thi hành"
+                      ],
+                      "clauseCount": 10,
+                      "document": {
+                        "id": "64c9f1e2b6e4a2a1b2c3d4e5",
+                        "name": "quy-dinh-ve-day-them-hoc-them",
+                        "type": "PDF",
+                        "date": "2024-07-26T12:00:00.000Z",
+                        "url": "https://res.cloudinary.com/demo/raw/upload/v1620000000/legal_docs/abc.pdf"
+                      },
+                      "clauses": [
+                        {
+                          "id": "1",
+                          "number": "1",
+                          "title": "Điều 1. Phạm vi điều chỉnh",
+                          "content": "Nội dung điều 1..."
+                        },
+                        {
+                          "id": "2",
+                          "number": "2",
+                          "title": "Điều 2. Đối tượng áp dụng",
+                          "content": "Nội dung điều 2..."
+                        }
+                      ],
+                      "message": "✅ Đã upload, nhận diện 3 chương, trích xuất và lưu 10 điều khoản vào database."
+                    }
                   }
                 }
               }
@@ -930,7 +962,7 @@
       },
       "put": {
         "summary": "[ADMIN] Cập nhật user theo ID",
-        "description": "Chỉ admin mới được cập nhật thông tin user.",
+        "description": "Chỉ admin mới được cập nhật thông tin user. Hỗ trợ cập nhật avatar (ảnh đại diện). Gửi avatar dạng file (field 'avatar', multipart/form-data).",
         "tags": ["User"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
@@ -944,12 +976,18 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/User" },
-              "example": {
-                "name": "Nguyen Van B",
-                "email": "vanb@example.com",
-                "role": "user"
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Ảnh đại diện (jpg, png, webp)"
+                  }
+                }
               }
             }
           }
@@ -959,12 +997,23 @@
             "description": "User updated",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/User" }
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_id": { "type": "string" },
+                    "name": { "type": "string" },
+                    "email": { "type": "string" },
+                    "role": { "type": "string" },
+                    "isEmailVerified": { "type": "boolean" },
+                    "avatar": {
+                      "type": "string",
+                      "description": "URL ảnh đại diện"
+                    }
+                  }
+                }
               }
             }
           },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" },
           "404": { "description": "User not found" }
         }
       },
@@ -1064,17 +1113,9 @@
                   "avatar": {
                     "type": "string",
                     "format": "binary",
-                    "description": "Ảnh đại diện (jpg, png)"
+                    "description": "Ảnh đại diện (jpg, png, webp)"
                   }
                 }
-              },
-              "encoding": {
-                "avatar": { "contentType": "image/png, image/jpeg" }
-              },
-              "example": {
-                "name": "Nguyen Van A",
-                "email": "vana@example.com",
-                "avatar": "<file>"
               }
             }
           }
@@ -1088,16 +1129,30 @@
                   "type": "object",
                   "properties": {
                     "message": { "type": "string" },
-                    "user": { "$ref": "#/components/schemas/User" },
-                    "needVerifyEmail": { "type": "boolean" }
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "email": { "type": "string" },
+                        "role": { "type": "string" },
+                        "isEmailVerified": { "type": "boolean" },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "avatar": {
+                          "type": "string",
+                          "description": "URL ảnh đại diện"
+                        }
+                      }
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "User not found" },
-          "500": { "description": "Failed to update profile" }
+          "404": { "description": "User not found" }
         }
       }
     },
