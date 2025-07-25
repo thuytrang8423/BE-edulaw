@@ -990,48 +990,6 @@
           "401": { "description": "Unauthorized" }
         }
       },
-      "post": {
-        "summary": "Cập nhật profile cá nhân (user hoặc admin)",
-        "tags": ["Profile"],
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": { "type": "string" },
-                  "email": { "type": "string", "format": "email" }
-                }
-              },
-              "example": {
-                "name": "Nguyen Van A",
-                "email": "vana@example.com"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Profile updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string" },
-                    "user": { "$ref": "#/components/schemas/User" }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "User not found" },
-          "500": { "description": "Failed to update profile" }
-        }
-      },
       "put": {
         "summary": "Cập nhật profile cá nhân (user hoặc admin)",
         "tags": ["Profile"],
