@@ -272,7 +272,7 @@
     "/legal-docs/upload": {
       "post": {
         "summary": "[ADMIN] Upload PDF, extract and save clauses",
-        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật",
+        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật và lưu vào cloudinary pdf",
         "tags": ["LegalDocument"],
         "requestBody": {
           "required": true,
@@ -297,14 +297,23 @@
                   "type": "object",
                   "properties": {
                     "success": { "type": "boolean" },
-                    "count": { "type": "integer" },
+                    "chapterCount": { "type": "integer" },
+                    "chapters": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "clauseCount": { "type": "integer" },
                     "document": {
                       "type": "object",
                       "properties": {
                         "id": { "type": "string" },
                         "name": { "type": "string" },
                         "type": { "type": "string" },
-                        "date": { "type": "string", "format": "date-time" }
+                        "date": { "type": "string", "format": "date-time" },
+                        "url": {
+                          "type": "string",
+                          "description": "URL file PDF trên Cloudinary"
+                        }
                       }
                     },
                     "clauses": {
@@ -319,8 +328,6 @@
                         }
                       }
                     },
-                    "markdown": { "type": "string" },
-                    "json": { "type": "string" },
                     "message": { "type": "string" }
                   }
                 }
@@ -328,19 +335,28 @@
             }
           },
           "400": {
-            "description": "No file uploaded hoặc không trích xuất được điều khoản"
-          },
-          "500": {
-            "description": "Lỗi xử lý file hoặc trích xuất (bao gồm cả lỗi OCR)",
+            "description": "File không chứa tiếng Việt hợp lệ hoặc quá ngắn, hoặc không trích xuất được điều khoản nào từ file PDF.",
             "content": {
               "application/json": {
-                "examples": {
-                  "ocrError": {
-                    "summary": "Lỗi OCR hoặc chuyển PDF sang ảnh",
-                    "value": {
-                      "success": false,
-                      "error": "Không lấy được buffer ảnh từ pdf2pic. Kiểm tra lại phiên bản pdf2pic hoặc option truyền vào."
-                    }
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi server khi xử lý file hoặc lưu dữ liệu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "error": { "type": "string" }
                   }
                 }
               }
@@ -988,6 +1004,48 @@
             }
           },
           "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Cập nhật profile cá nhân (user hoặc admin)",
+        "tags": ["Profile"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" }
+                }
+              },
+              "example": {
+                "name": "Nguyen Van A",
+                "email": "vana@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" },
+          "500": { "description": "Failed to update profile" }
         }
       },
       "put": {
