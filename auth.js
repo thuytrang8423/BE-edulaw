@@ -16,6 +16,8 @@ const {
   resetPasswordValidation,
   handleValidationErrors,
 } = require("../middleware/validation");
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Public routes
 router.post(
@@ -80,6 +82,7 @@ router.put(
   "/users/:id",
   authenticateToken,
   authorize("admin"),
+  upload.single("avatar"),
   authController.updateUser.bind(authController)
 );
 router.delete(
