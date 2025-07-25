@@ -25,7 +25,8 @@ const userSchema = new mongoose.Schema(
       minLength: [6, "Password must be at least 6 characters"],
       select: false, // Won't return in queries by default
     },
-    avatar: { type: String, default: '' },
+    avatar: { type: String, default: "" },
+    avatarFile: { type: String, default: "" }, // Lưu publicId file Cloudinary
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -144,7 +145,7 @@ userSchema.methods.incLoginAttempts = function () {
 };
 
 // Method to generate a 6-digit code
-userSchema.methods.generateEmailVerificationCode = function() {
+userSchema.methods.generateEmailVerificationCode = function () {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   this.emailVerificationCode = code;
   this.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
@@ -152,7 +153,7 @@ userSchema.methods.generateEmailVerificationCode = function() {
 };
 
 // Method to verify the code
-userSchema.methods.verifyEmailCode = function(code) {
+userSchema.methods.verifyEmailCode = function (code) {
   return (
     this.emailVerificationCode === code &&
     this.emailVerificationExpires > Date.now()

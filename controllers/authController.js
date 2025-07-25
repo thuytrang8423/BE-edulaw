@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { OAuth2Client } = require("google-auth-library");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const cloudinary = require("../services/cloudinary");
 
 class AuthController {
   // Generate JWT tokens
@@ -369,12 +370,38 @@ class AuthController {
   // Cập nhật user (admin)
   async updateUser(req, res) {
     try {
-      const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      let update = {};
+      if (typeof req.body.name === "string" && req.body.name.trim() !== "")
+        update.name = req.body.name;
+      if (typeof req.body.email === "string" && req.body.email.trim() !== "")
+        update.email = req.body.email;
+      if (
+        typeof req.body.role === "string" &&
+        ["user", "admin"].includes(req.body.role)
+      )
+        update.role = req.body.role;
+      // Nếu có file avatar gửi lên
+      if (req.file && req.file.buffer) {
+        const publicId = `user_${req.params.id}`;
+        const avatarUrl = await cloudinary.uploadAvatar(
+          req.file.buffer,
+          publicId
+        );
+        update.avatar = avatarUrl;
+        update.avatarFile = publicId;
+      }
+      if (Object.keys(update).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      const user = await User.findByIdAndUpdate(req.params.id, update, {
         new: true,
       });
       if (!user) return res.status(404).json({ message: "User not found" });
-      res.json(user);
+      res.json({ user });
     } catch (error) {
+      console.error("Update user error:", error);
+      console.log("req.body:", req.body);
+      console.log("req.file:", req.file);
       res.status(500).json({ message: "Failed to update user" });
     }
   }
@@ -399,11 +426,29 @@ class AuthController {
   async updateProfile(req, res) {
     try {
       const userId = req.user.id;
-      const { name, email } = req.body;
-      // Không cho phép đổi role qua API này
-      const update = {};
-      if (name) update.name = name;
-      if (email) update.email = email;
+      let update = {};
+      if (typeof req.body.name === "string" && req.body.name.trim() !== "")
+        update.name = req.body.name;
+      if (typeof req.body.email === "string" && req.body.email.trim() !== "")
+        update.email = req.body.email;
+      if (
+        typeof req.body.role === "string" &&
+        ["user", "admin"].includes(req.body.role)
+      )
+        update.role = req.body.role;
+      // Nếu có file avatar gửi lên
+      if (req.file && req.file.buffer) {
+        const publicId = `user_${userId}`;
+        const avatarUrl = await cloudinary.uploadAvatar(
+          req.file.buffer,
+          publicId
+        );
+        update.avatar = avatarUrl;
+        update.avatarFile = publicId;
+      }
+      if (Object.keys(update).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
       const user = await User.findByIdAndUpdate(userId, update, { new: true });
       if (!user) return res.status(404).json({ message: "User not found" });
       res.json({
@@ -415,6 +460,8 @@ class AuthController {
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           createdAt: user.createdAt,
+          avatar: user.avatar,
+          avatarFile: user.avatarFile,
         },
       });
     } catch (error) {
