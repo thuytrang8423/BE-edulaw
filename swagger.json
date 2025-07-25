@@ -6,9 +6,9 @@
     "description": "API documentation for the AI Chatbot for Education Laws."
   },
   "servers": [
-   {
-      "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Railway server"
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Local server"
     }
   ],
   "paths": {
@@ -833,8 +833,9 @@
     "/feedbacks": {
       "post": {
         "summary": "[USER] Gửi feedback về hệ thống",
-        "description": "User gửi góp ý/phản hồi về hệ thống.",
+        "description": "User gửi góp ý/phản hồi về hệ thống. Không cần truyền user_id, backend lấy từ token.",
         "tags": ["Feedback"],
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -842,21 +843,68 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "user_id": { "type": "string" },
                   "content": { "type": "string" }
                 },
-                "required": ["user_id", "content"]
+                "required": ["content"]
+              },
+              "example": {
+                "content": "Hệ thống rất hữu ích!"
               }
             }
           }
         },
-        "responses": { "201": { "description": "Feedback created" } }
+        "responses": {
+          "201": {
+            "description": "Feedback created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "content": { "type": "string" },
+                    "createdAt": { "type": "string", "format": "date-time" }
+                  },
+                  "example": {
+                    "name": "Nguyen Van A",
+                    "content": "Hệ thống rất hữu ích!",
+                    "createdAt": "2025-07-25T20:19:27.741Z"
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       "get": {
         "summary": "[ADMIN] Xem tất cả feedback",
-        "description": "Admin xem danh sách góp ý/phản hồi của user.",
+        "description": "Admin xem danh sách góp ý/phản hồi của user. Trả về cả user_id (object với _id và name).",
         "tags": ["Feedback"],
-        "responses": { "200": { "description": "List of feedbacks" } }
+        "responses": {
+          "200": {
+            "description": "List of feedbacks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "content": { "type": "string" },
+                      "createdAt": { "type": "string", "format": "date-time" }
+                    },
+                    "example": {
+                      "name": "Nguyen Van A",
+                      "content": "Hệ thống rất hữu ích!",
+                      "createdAt": "2025-07-25T20:19:27.741Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/feedbacks/{id}": {
