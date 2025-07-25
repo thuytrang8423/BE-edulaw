@@ -272,7 +272,7 @@
     "/legal-docs/upload": {
       "post": {
         "summary": "[ADMIN] Upload PDF, extract and save clauses",
-        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật, hệ thống tự động nhận diện dạng text hoặc scan (ảnh). Nếu là scan, sẽ tự động nhận diện tiếng Việt bằng OCR và trích xuất điều khoản.",
+        "description": "Chỉ admin mới được sử dụng. Upload file PDF luật",
         "tags": ["LegalDocument"],
         "requestBody": {
           "required": true,
