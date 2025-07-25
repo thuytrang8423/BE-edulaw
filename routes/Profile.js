@@ -13,7 +13,7 @@ const storage = new CloudinaryStorage({
     folder: "avatars",
     allowed_formats: ["jpg", "jpeg", "png"],
     transformation: [{ width: 256, height: 256, crop: "limit" }],
-    resource_type: "image"
+    resource_type: "image",
   },
 });
 const upload = multer({ storage });
@@ -23,15 +23,25 @@ router.get("/profile/me", authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      createdAt: user.createdAt,
-    });
+    if (user.role === "admin") {
+      // Trả về full thông tin cho admin
+      res.json({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+      });
+    } else {
+      // Chỉ trả về name, email, avatar cho user thường
+      res.json({
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      });
+    }
   } catch (error) {
     res.status(500).json({ message: "Failed to get profile" });
   }
@@ -73,7 +83,7 @@ router.put(
       // Nếu đổi email, gửi lại mã xác thực
       if (needVerifyEmail && newVerifyCode && newEmail) {
         const emailService = require("../services/emailService");
-        await emailService.sendVerificationCode(newEmail, newVerifyCode);
+        await emailService.sendVerificationEmail(user, newVerifyCode);
       }
       res.json({
         message: "Profile updated successfully",

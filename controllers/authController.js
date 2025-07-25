@@ -203,6 +203,7 @@ class AuthController {
         message: "Login successful",
         accessToken,
         refreshToken,
+        userId: user._id, // Thêm userId ra ngoài
         user: {
           id: user._id,
           name: user.name,

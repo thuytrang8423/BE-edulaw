@@ -6,9 +6,9 @@
     "description": "API documentation for the AI Chatbot for Education Laws."
   },
   "servers": [
-   {
-      "url": "https://be-edulaw-production.up.railway.app/api",
-      "description": "Railway server"
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Local server"
     }
   ],
   "paths": {
@@ -221,17 +221,7 @@
         }
       }
     },
-    "/auth/me": {
-      "get": {
-        "summary": "Get current user info",
-        "tags": ["Auth"],
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "Current user info returned" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
+
     "/auth/logout": {
       "post": {
         "summary": "Logout user (client-side token removal)",
@@ -240,42 +230,6 @@
         "responses": {
           "200": { "description": "Logout successful" },
           "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/auth/google": {
-      "post": {
-        "summary": "Login with Google OAuth (Expo/React Native/Web)",
-        "description": "FE lấy id_token từ Google (qua Expo AuthSession hoặc Google Identity Services), gửi lên backend để xác thực và nhận JWT.",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id_token": {
-                    "type": "string",
-                    "description": "Google ID Token"
-                  }
-                },
-                "required": ["id_token"]
-              },
-              "example": {
-                "id_token": "ya29.a0AfH6SMB..."
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Login with Google successful. JWT tokens returned."
-          },
-          "401": { "description": "Google login failed" },
-          "400": {
-            "description": "Missing Google ID token or Google account has no email"
-          }
         }
       }
     },
@@ -395,74 +349,7 @@
         }
       }
     },
-    "/legal-docs/export-files": {
-      "post": {
-        "summary": "[ADMIN] Upload PDF and export files (no database save)",
-        "description": "Upload file PDF, trích xuất điều khoản và xuất ra file Markdown/JSON. Không lưu vào database.",
-        "tags": ["LegalDocument"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": { "type": "string", "format": "binary" }
-                },
-                "required": ["file"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Xuất file thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "count": { "type": "integer" },
-                    "files": {
-                      "type": "object",
-                      "properties": {
-                        "markdown": {
-                          "type": "object",
-                          "properties": {
-                            "content": { "type": "string" },
-                            "filename": { "type": "string" }
-                          }
-                        },
-                        "json": {
-                          "type": "object",
-                          "properties": {
-                            "content": { "type": "string" },
-                            "filename": { "type": "string" }
-                          }
-                        },
-                        "raw": {
-                          "type": "object",
-                          "properties": {
-                            "content": { "type": "string" },
-                            "filename": { "type": "string" }
-                          }
-                        }
-                      }
-                    },
-                    "message": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "No file uploaded hoặc không trích xuất được điều khoản"
-          },
-          "500": { "description": "Lỗi xử lý file hoặc trích xuất" }
-        }
-      }
-    },
+
     "/legal-docs/{id}": {
       "get": {
         "summary": "[USER/ADMIN] Get legal document by ID",
@@ -529,112 +416,6 @@
         "responses": {
           "200": { "description": "Legal document deleted" },
           "404": { "description": "Not found" }
-        }
-      }
-    },
-    "/legal-docs/clauses/{documentId}": {
-      "get": {
-        "summary": "[USER/ADMIN] Get all clauses of a legal document",
-        "description": "Lấy tất cả điều khoản của một văn bản pháp luật, sắp xếp theo số điều.",
-        "tags": ["LegalDocument"],
-        "parameters": [
-          {
-            "name": "documentId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Danh sách điều khoản của văn bản",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "count": { "type": "integer" },
-                    "clauses": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": { "type": "string" },
-                          "number": { "type": "string" },
-                          "content": { "type": "string" }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": { "description": "Lỗi server" }
-        }
-      }
-    },
-    "/legal-docs/export/{documentId}": {
-      "get": {
-        "summary": "[USER/ADMIN] Export document from database to Markdown/JSON",
-        "description": "Xuất văn bản từ database ra file Markdown và JSON.",
-        "tags": ["LegalDocument"],
-        "parameters": [
-          {
-            "name": "documentId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Xuất document thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "count": { "type": "integer" },
-                    "document": {
-                      "type": "object",
-                      "properties": {
-                        "id": { "type": "string" },
-                        "name": { "type": "string" },
-                        "type": { "type": "string" },
-                        "date": { "type": "string", "format": "date-time" }
-                      }
-                    },
-                    "files": {
-                      "type": "object",
-                      "properties": {
-                        "markdown": {
-                          "type": "object",
-                          "properties": {
-                            "content": { "type": "string" },
-                            "filename": { "type": "string" }
-                          }
-                        },
-                        "json": {
-                          "type": "object",
-                          "properties": {
-                            "content": { "type": "string" },
-                            "filename": { "type": "string" }
-                          }
-                        }
-                      }
-                    },
-                    "message": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "404": { "description": "Document not found" },
-          "400": { "description": "No clauses found for this document" },
-          "500": { "description": "Lỗi server" }
         }
       }
     },
@@ -886,7 +667,6 @@
     "/questions": {
       "get": {
         "summary": "[ADMIN] Get all questions",
-        "description": "Chỉ admin mới được xem danh sách tất cả câu hỏi.",
         "tags": ["Question"],
         "security": [{ "bearerAuth": [] }],
         "responses": {
@@ -903,6 +683,101 @@
           },
           "401": { "description": "Unauthorized" },
           "403": { "description": "Forbidden" }
+        }
+      },
+      "post": {
+        "summary": "Tạo question mới",
+        "tags": ["Question"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question_content": { "type": "string" },
+                  "account_id": { "type": "string" },
+                  "chat_id": { "type": "string" }
+                },
+                "required": ["question_content", "account_id"]
+              },
+              "example": {
+                "question_content": "Luật giáo dục là gì?",
+                "account_id": "user_id",
+                "chat_id": "chat_id_phong"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Question created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Question" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" }
+        }
+      }
+    },
+    "/questions/{id}": {
+      "get": {
+        "summary": "Lấy chi tiết question theo id",
+        "tags": ["Question"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Question detail",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Question" }
+              }
+            }
+          },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/answer/Answer": {
+      "get": {
+        "summary": "Lấy danh sách answer theo questionId và userId",
+        "tags": ["Answer"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of answers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Answer" }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1098,11 +973,26 @@
         }
       }
     },
-    "/auth/profile": {
-      "put": {
+    "/profile/me": {
+      "get": {
+        "summary": "Lấy thông tin user hiện tại",
+        "tags": ["Profile"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Current user info returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
         "summary": "Cập nhật profile cá nhân (user hoặc admin)",
-        "description": "Cập nhật thông tin cá nhân (name, email) cho user hoặc admin. Yêu cầu đăng nhập. Không cho phép đổi role qua API này.",
-        "tags": ["Auth"],
+        "tags": ["Profile"],
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -1132,6 +1022,58 @@
                   "properties": {
                     "message": { "type": "string" },
                     "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" },
+          "500": { "description": "Failed to update profile" }
+        }
+      },
+      "put": {
+        "summary": "Cập nhật profile cá nhân (user hoặc admin)",
+        "tags": ["Profile"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Ảnh đại diện (jpg, png)"
+                  }
+                }
+              },
+              "encoding": {
+                "avatar": { "contentType": "image/png, image/jpeg" }
+              },
+              "example": {
+                "name": "Nguyen Van A",
+                "email": "vana@example.com",
+                "avatar": "<file>"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "needVerifyEmail": { "type": "boolean" }
                   }
                 }
               }

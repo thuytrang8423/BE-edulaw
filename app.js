@@ -1,6 +1,4 @@
 require("dotenv").config();
-// Bỏ qua kiểm tra SSL cho dev/test (không dùng cho production)
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -10,7 +8,6 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const http = require("http");
 const ChatRoomController = require("./controllers/ChatRoomController");
-const gatewayRoutes = require("./routes/gateway");
 const answerRoutes = require("./routes/answer");
 
 const app = express();
@@ -84,7 +81,6 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/feedbacks", feedbackRoutes);
 app.use("/api/chat-room", chatRoomRoutes);
 app.use("/api", answerRoutes);
-app.use("/gateway", gatewayRoutes);
 // Swagger UI
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
