@@ -4,6 +4,7 @@ const multer = require("multer");
 const pdfParse = require("pdf-parse");
 const LegalDocument = require("../models/LegalDocument");
 const LegalClause = require("../models/LegalClause");
+const Notification = require("../models/Notification");
 const controller = require("../controllers/LegalDocumentController");
 const cloudinary = require("../services/cloudinary");
 
@@ -202,7 +203,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       message: `✅ Đã upload, nhận diện ${chapters.length} chương, trích xuất và lưu ${clauses.length} điều khoản vào database.`,
     });
 
-    // Emit socket thông báo upload thành công
+    // Tạo notification khi upload thành công
+    const notification = await Notification.create({
+      title: "Văn bản pháp luật mới",
+      content: `Văn bản "${originalName}" đã được upload thành công với ${clauses.length} điều khoản.`,
+    });
+
+    // Emit socket thông báo upload thành công và notification mới
     const io = req.app.get("io");
     if (io) {
       io.emit("legal_doc_uploaded", {
@@ -214,6 +221,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         },
         message: "Văn bản pháp luật mới đã được upload!",
       });
+
+      // Emit notification mới đến room notifications
+      io.to("notifications").emit("new_notification", notification);
     }
   } catch (err) {
     console.error("Upload and save to database error:", err);

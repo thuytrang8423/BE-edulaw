@@ -18,6 +18,7 @@ app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
+
   socket.on("send_question", async (data) => {
     try {
       const req = { body: data };
@@ -42,6 +43,12 @@ io.on("connection", (socket) => {
     } catch (err) {
       socket.emit("receive_answer", { status: 500, error: err.message });
     }
+  });
+
+  // Listen for notification events
+  socket.on("join_notifications", () => {
+    console.log("User joined notifications room:", socket.id);
+    socket.join("notifications");
   });
 });
 

@@ -8,7 +8,7 @@ exports.create = async (req, res) => {
     // Emit socket thông báo notification mới
     const io = req.app.get("io");
     if (io) {
-      io.emit("new_notification", notification);
+      io.to("notifications").emit("new_notification", notification);
     }
   } catch (err) {
     res.status(400).json({ error: err.message });
